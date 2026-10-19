@@ -17,11 +17,11 @@ html,body{height:100%;background:#04050d;color:var(--ink);font-family:Manrope,"H
 .aurora i:nth-child(3){background:#00d6b4;left:25vw;bottom:-35vw;opacity:.4;animation-duration:80s}
 @keyframes drift{to{transform:translate(12vw,8vh) scale(1.2)}}
 #shift{position:relative;z-index:1;height:100%;padding:4vh 4vw;display:grid;gap:2.2vh 1.6vw;
- grid-template-columns:1.25fr 1fr 1fr;grid-template-rows:1.15fr 1fr 1fr;
- grid-template-areas:"clock wx wx" "fc sun air" "news news sports";transition:transform 4s ease}
-.card{background:var(--glass);border:1px solid var(--edge);border-radius:2.2vh;padding:2.4vh 1.6vw;
- backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%);overflow:hidden;min-width:0}
-.card h2{font-size:1.7vh;font-weight:600;color:var(--dim);margin-bottom:1.4vh;letter-spacing:.02em}
+ grid-template-columns:1.1fr 1fr 1fr;grid-template-rows:1.05fr 1.05fr 1fr;
+ grid-template-areas:"clock wx wx" "fc sun air" "news sports sports";transition:transform 4s ease}
+.card{background:var(--glass);border:1px solid var(--edge);border-radius:2.2vh;padding:2vh 1.5vw;
+ backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%);overflow:hidden;min-width:0;min-height:0}
+.card h2{font-size:1.7vh;font-weight:600;color:var(--dim);margin-bottom:1.2vh;letter-spacing:.02em}
 #clock{grid-area:clock;background:none;border:none;backdrop-filter:none;padding:0;display:flex;flex-direction:column;justify-content:center}
 #time{font-size:15vh;font-weight:200;line-height:1;letter-spacing:-.03em}
 #time small{font-size:4vh;font-weight:300;margin-left:1vw;color:var(--dim)}
@@ -31,52 +31,71 @@ html,body{height:100%;background:#04050d;color:var(--ink);font-family:Manrope,"H
 #temp{font-size:11vh;font-weight:200;line-height:1}
 #wxdesc{font-size:3vh;font-weight:300}
 #wxsub{font-size:2.1vh;color:var(--dim);margin-top:.6vh}
-#fc{grid-area:fc}.days{display:flex;justify-content:space-between;height:calc(100% - 3.5vh);align-items:center}
-.day{text-align:center;font-size:2vh}.day b{display:block;font-weight:400;color:var(--dim);margin-bottom:.6vh}
-.day span{display:block;font-size:4vh;margin:.4vh 0}.day em{font-style:normal;color:var(--dim)}
+#fc{grid-area:fc}.days{display:flex;justify-content:space-between;height:calc(100% - 3vh);align-items:center}
+.day{text-align:center;font-size:1.9vh}.day b{display:block;font-weight:400;color:var(--dim);margin-bottom:.4vh}
+.day span{display:block;font-size:3.6vh;margin:.3vh 0}.day em{font-style:normal;color:var(--dim)}
 #sun{grid-area:sun}#air{grid-area:air}
-.big{font-size:5.4vh;font-weight:200;line-height:1.1}.row{font-size:2.1vh;color:var(--dim);margin-top:.8vh}
-.moon{font-size:5vh;float:right}
-.meter{height:.9vh;border-radius:1vh;background:rgba(255,255,255,.12);margin-top:1.4vh;overflow:hidden}
+.cols{display:flex;gap:1.2vw}.cols>div{flex:1;min-width:0}
+.big{font-size:4.4vh;font-weight:200;line-height:1.1;white-space:nowrap}
+.row{font-size:1.9vh;color:var(--dim);margin-top:.5vh}
+.moonrow{display:flex;align-items:center;gap:1vw;margin-top:2vh}
+#moon{font-size:5vh;line-height:1}#moontxt{font-size:2vh;color:var(--dim);line-height:1.3}
+.meter{height:.9vh;border-radius:1vh;background:rgba(255,255,255,.12);margin-top:1.2vh;overflow:hidden}
 .meter div{height:100%;border-radius:1vh;background:linear-gradient(90deg,#00d6b4,#ffd84a,#ff5c7a);transition:width 1s}
 #news{grid-area:news}#sports{grid-area:sports}
-.head{font-size:2.9vh;font-weight:300;line-height:1.3;transition:opacity .8s}
-.head.sub{font-size:2.1vh;color:var(--dim);margin-top:1.1vh}.src{font-size:1.7vh;color:var(--dim);margin-top:1.4vh}
-.game{display:flex;justify-content:space-between;font-size:2.1vh;padding:.7vh 0;border-bottom:1px solid rgba(255,255,255,.08)}
-.game:last-child{border:0}.game span{color:var(--dim)}
-.live{color:#ff6b8a!important}
-#agenda{position:absolute;right:4vw;top:4vh;z-index:2;text-align:right;font-size:2.1vh;color:var(--dim);line-height:1.7}
-#agenda b{display:block;color:var(--ink);font-weight:400;font-size:2.3vh}
+.head{font-size:2.6vh;font-weight:300;line-height:1.3;transition:opacity .8s;display:-webkit-box;-webkit-line-clamp:3;-webkit-box-orient:vertical;overflow:hidden}
+.head.sub{font-size:1.9vh;color:var(--dim);margin-top:1.1vh;-webkit-line-clamp:1}
+.src{font-size:1.6vh;color:var(--dim);margin-top:1.2vh}
+.leagues{display:flex;gap:1vw;height:calc(100% - 3vh)}
+.lg{flex:1;min-width:0;background:rgba(255,255,255,.05);border-radius:1.6vh;padding:1.2vh .9vw;overflow:hidden}
+.lg h3{font-size:1.8vh;font-weight:600;margin-bottom:.7vh}
+.g{display:flex;justify-content:space-between;gap:.6vw;font-size:1.85vh;padding:.45vh 0;white-space:nowrap}
+.g b{font-weight:400;overflow:hidden;text-overflow:ellipsis}.g span{color:var(--dim);font-size:1.6vh;flex:none;align-self:center}
+.g .live{color:#ff6b8a}
+.none{font-size:1.8vh;color:var(--dim)}
 </style>
 </head>
 <body>
 <div class="aurora"><i></i><i></i><i></i></div>
-<div id="agenda"></div>
 <main id="shift">
  <section id="clock" class="card"><div id="time"></div><div id="date"></div></section>
  <section id="wx" class="card"><div id="wxicon">⛅</div><div><div id="temp">--°</div><div id="wxdesc">Loading…</div><div id="wxsub"></div></div></section>
  <section id="fc" class="card"><h2>Next 5 days</h2><div class="days"></div></section>
- <section id="sun" class="card"><h2>Sun and moon</h2><div class="moon" id="moon"></div>
-  <div class="big" id="sunrise">--</div><div class="row">Sunrise</div>
-  <div class="big" id="sunset" style="margin-top:1.4vh">--</div><div class="row" id="moontxt">Sunset</div></section>
+ <section id="sun" class="card"><h2>Sun and moon</h2>
+  <div class="cols"><div><div class="big" id="sunrise">--</div><div class="row">Sunrise</div></div>
+  <div><div class="big" id="sunset">--</div><div class="row">Sunset</div></div></div>
+  <div class="moonrow"><div id="moon"></div><div id="moontxt"></div></div></section>
  <section id="air" class="card"><h2>Air and UV</h2>
-  <div class="big" id="aqi">--</div><div class="row" id="aqitxt">Air quality</div><div class="meter"><div id="aqibar" style="width:0"></div></div>
-  <div class="big" id="uv" style="margin-top:1.6vh">--</div><div class="row">UV index today</div></section>
- <section id="news" class="card"><h2>Headlines</h2><div class="head" id="h1"></div><div class="head sub" id="h2"></div><div class="src" id="hsrc"></div></section>
- <section id="sports" class="card"><h2>Scores</h2><div id="games"></div></section>
+  <div class="cols"><div><div class="big" id="aqi">--</div><div class="row" id="aqitxt">Air quality</div><div class="meter"><div id="aqibar" style="width:0"></div></div></div>
+  <div><div class="big" id="uv">--</div><div class="row" id="uvtxt">UV index</div><div class="meter"><div id="uvbar" style="width:0"></div></div></div></div></section>
+ <section id="news" class="card"><h2>Headlines</h2><div class="head" id="h1">Loading headlines…</div><div class="head sub" id="h2"></div><div class="src" id="hsrc"></div></section>
+ <section id="sports" class="card"><h2>Scores</h2><div class="leagues" id="leagues"></div></section>
 </main>
 <script>
 /* ===== SETTINGS: edit these ===== */
 const CFG={
   city:'Woodstock', lat:43.13, lon:-80.75,
   clock24:false,
-  newsFeed:'https://www.cbc.ca/webfeed/rss/rss-topstories', newsName:'CBC News',
-  leagues:[['hockey','nhl'],['basketball','nba'],['football','nfl'],['baseball','mlb']],
-  // Agenda: add your own, or leave empty. Format: {t:'3:30 PM', title:'Dentist'}
-  events:[{t:'Today',title:'Add your events in CFG.events'}]
+  // News: every feed that loads is mixed together. Feeds that fail are skipped.
+  newsFeeds:[
+    {name:'Sportsnet',     url:'https://www.sportsnet.ca/feed/'},
+    {name:'Sportsnet NHL', url:'https://www.sportsnet.ca/hockey/nhl/feed'},
+    {name:'Sportsnet MLB', url:'https://www.sportsnet.ca/baseball/mlb/feed'},
+    {name:'TSN',           url:'http://www.tsn.ca/datafiles/rss/Stories.xml'}
+  ],
+  // Scores: one box per league, shown left to right.
+  // type 'espn' covers NHL, MLB, NBA etc. ('sport/league' as ESPN names them).
+  // type 'hockeytech' covers the OHL (ESPN doesn't carry it).
+  // teams: abbreviations to show only those games, e.g. ['TOR'] or ['LDN']. [] shows all games.
+  leagues:[
+    {type:'espn', sport:'baseball', league:'mlb', label:'MLB', teams:[]},
+    {type:'hockeytech', code:'ohl', keys:['f1aa699db3d81487','4767a11864244441'], label:'OHL', teams:[]},
+    {type:'espn', sport:'hockey', league:'nhl', label:'NHL', teams:[]}
+  ]
 };
 /* ================================ */
 const $=id=>document.getElementById(id);
+const tfetch=(u,ms=8000)=>{const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);return fetch(u,{signal:c.signal}).finally(()=>clearTimeout(t))};
 const WX={0:['☀️','Clear'],1:['🌤️','Mostly clear'],2:['⛅','Partly cloudy'],3:['☁️','Overcast'],45:['🌫️','Fog'],48:['🌫️','Fog'],51:['🌦️','Light drizzle'],53:['🌦️','Drizzle'],55:['🌧️','Heavy drizzle'],61:['🌧️','Light rain'],63:['🌧️','Rain'],65:['🌧️','Heavy rain'],71:['🌨️','Light snow'],73:['❄️','Snow'],75:['❄️','Heavy snow'],77:['🌨️','Snow grains'],80:['🌦️','Showers'],81:['🌧️','Showers'],82:['⛈️','Heavy showers'],85:['🌨️','Snow showers'],86:['❄️','Snow showers'],95:['⛈️','Thunderstorm'],96:['⛈️','Thunderstorm'],99:['⛈️','Thunderstorm']};
 const wx=c=>WX[c]||['⛅','Mixed'];
 const fmt=d=>d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:!CFG.clock24});
@@ -96,13 +115,13 @@ function moon(){
   const names=['New moon','Waxing crescent','First quarter','Waxing gibbous','Full moon','Waning gibbous','Last quarter','Waning crescent'];
   const i=Math.round(p*8)%8, lit=Math.round((1-Math.cos(2*Math.PI*p))/2*100);
   $('moon').textContent=['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][i];
-  return names[i]+', '+lit+'% lit';
+  $('moontxt').innerHTML=names[i]+'<br>'+lit+'% lit';
 }
 
 async function weather(){
   try{
     const u=`https://api.open-meteo.com/v1/forecast?latitude=${CFG.lat}&longitude=${CFG.lon}&current=temperature_2m,apparent_temperature,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&timezone=auto`;
-    const d=await (await fetch(u)).json(), c=d.current, dl=d.daily;
+    const d=await (await tfetch(u)).json(), c=d.current, dl=d.daily;
     const [ic,tx]=wx(c.weather_code);
     $('wxicon').textContent=ic;$('temp').textContent=Math.round(c.temperature_2m)+'°';
     $('wxdesc').textContent=tx;
@@ -111,62 +130,110 @@ async function weather(){
       const day=new Date(dl.time[i]+'T12:00').toLocaleDateString([],{weekday:'short'});
       return `<div class="day"><b>${day}</b><span>${wx(dl.weather_code[i])[0]}</span>${Math.round(dl.temperature_2m_max[i])}° <em>${Math.round(dl.temperature_2m_min[i])}°</em></div>`}).join('');
     $('sunrise').textContent=fmt(new Date(dl.sunrise[0]));$('sunset').textContent=fmt(new Date(dl.sunset[0]));
-    $('uv').textContent=Math.round(dl.uv_index_max[0]*10)/10;
+    const uv=Math.round(dl.uv_index_max[0]*10)/10;
+    $('uv').textContent=uv;
+    $('uvtxt').textContent='UV · '+(uv<3?'Low':uv<6?'Moderate':uv<8?'High':uv<11?'Very high':'Extreme');
+    $('uvbar').style.width=Math.min(100,uv/11*100)+'%';
   }catch(e){console.warn('weather',e)}
   try{
-    const a=await (await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${CFG.lat}&longitude=${CFG.lon}&current=us_aqi`)).json();
+    const a=await (await tfetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${CFG.lat}&longitude=${CFG.lon}&current=us_aqi`)).json();
     const v=Math.round(a.current.us_aqi);
     $('aqi').textContent=v;
-    $('aqitxt').textContent='Air quality · '+(v<=50?'Good':v<=100?'Moderate':v<=150?'Unhealthy for some':'Unhealthy');
+    $('aqitxt').textContent='AQI · '+(v<=50?'Good':v<=100?'Moderate':v<=150?'Unhealthy for some':'Unhealthy');
     $('aqibar').style.width=Math.min(100,v/2)+'%';
   }catch(e){console.warn('air',e)}
 }
 
+/* ---------- News: mixes every feed that loads (3 routes per feed) ---------- */
+function parseRSS(xml){
+  const doc=new DOMParser().parseFromString(xml,'text/xml');
+  return [...doc.querySelectorAll('item > title, entry > title')].map(x=>x.textContent.trim()).filter(Boolean);
+}
+async function loadFeed(url){
+  const enc=encodeURIComponent(url);
+  const tries=[
+    async()=>{const d=await (await tfetch('https://api.rss2json.com/v1/api.json?rss_url='+enc)).json();if(d.status&&d.status!=='ok')throw 0;return d.items.map(i=>i.title)},
+    async()=>parseRSS(await (await tfetch('https://api.allorigins.win/raw?url='+enc)).text()),
+    async()=>parseRSS(await (await tfetch('https://corsproxy.io/?url='+enc)).text())
+  ];
+  for(const t of tries){try{const r=await t();if(r&&r.length)return r}catch(e){}}
+  return [];
+}
 let heads=[],hi=0;
 async function news(){
-  try{
-    const d=await (await fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(CFG.newsFeed))).json();
-    heads=d.items.map(i=>i.title);hi=0;showHead();
-  }catch(e){$('h1').textContent='Headlines are unavailable right now.';console.warn('news',e)}
+  const lists=await Promise.all(CFG.newsFeeds.map(async f=>(await loadFeed(f.url)).slice(0,12).map(t=>({t,s:f.name}))));
+  const mixed=[],seen=new Set();
+  for(let i=0;i<12;i++)lists.forEach(l=>{const h=l[i];if(h&&!seen.has(h.t)){seen.add(h.t);mixed.push(h)}});
+  if(mixed.length){heads=mixed;hi=0;showHead();return}
+  if(!heads.length){$('h1').textContent='Headlines couldn’t load. Retrying soon.';$('h2').textContent='';setTimeout(news,120000)}
 }
 function showHead(){
   if(!heads.length)return;
   const a=$('h1'),b=$('h2');a.style.opacity=b.style.opacity=0;
-  setTimeout(()=>{a.textContent=heads[hi%heads.length];b.textContent=heads[(hi+1)%heads.length];
-    $('hsrc').textContent=CFG.newsName;a.style.opacity=1;b.style.opacity=1;hi+=2},800);
+  setTimeout(()=>{const x=heads[hi%heads.length],y=heads[(hi+1)%heads.length];
+    a.textContent=x.t;b.textContent=y.t;$('hsrc').textContent=x.s;a.style.opacity=1;b.style.opacity=1;hi+=2},800);
 }
 setInterval(showHead,12000);
 
-async function sports(){
-  const all=[];
-  await Promise.all(CFG.leagues.map(async([s,l])=>{
-    try{
-      const d=await (await fetch(`https://site.api.espn.com/apis/site/v2/sports/${s}/${l}/scoreboard`)).json();
-      (d.events||[]).forEach(e=>{
-        const c=e.competitions[0].competitors, st=e.status.type;
-        const away=c.find(x=>x.homeAway==='away'),home=c.find(x=>x.homeAway==='home');
-        all.push({l:l.toUpperCase(),state:st.state,det:st.shortDetail,
-          line:`${away.team.abbreviation} ${st.state==='pre'?'':away.score} – ${st.state==='pre'?'':home.score} ${home.team.abbreviation}`.replace('  ',' '),
-          date:new Date(e.date)});
-      });
-    }catch(e){}
-  }));
-  const rank={in:0,pre:1,post:2};
-  all.sort((a,b)=>rank[a.state]-rank[b.state]||a.date-b.date);
-  $('games').innerHTML=all.slice(0,5).map(g=>`<div class="game"><b style="font-weight:400">${g.l} · ${g.line}</b><span class="${g.state==='in'?'live':''}">${g.det}</span></div>`).join('')||'<div class="row">No games on the schedule.</div>';
-}
+/* ---------- Scores: one box per league ---------- */
+const dayTag=d=>{const n=new Date();return d.toDateString()===n.toDateString()?'':d.toLocaleDateString([],{weekday:'short'})};
+const preLabel=d=>(dayTag(d)?dayTag(d)+' ':'')+fmt(d);
+const postLabel=(txt,d)=>(txt||'Final')+(dayTag(d)?' · '+dayTag(d):'');
 
-function agenda(){
-  $('agenda').innerHTML=CFG.events.slice(0,3).map(e=>`<b>${e.title}</b>${e.t}`).join('<br>');
+async function espnGames(L){
+  const d=await (await tfetch(`https://site.api.espn.com/apis/site/v2/sports/${L.sport}/${L.league}/scoreboard`)).json();
+  return (d.events||[]).map(e=>{
+    const c=e.competitions[0].competitors, st=e.status.type, date=new Date(e.date);
+    const away=c.find(x=>x.homeAway==='away'),home=c.find(x=>x.homeAway==='home');
+    const A=away.team.abbreviation,H=home.team.abbreviation,pre=st.state==='pre';
+    return {A,H,state:st.state,date,
+      line:pre?`${A} at ${H}`:`${A} ${away.score} – ${home.score} ${H}`,
+      det:pre?preLabel(date):(st.state==='post'?postLabel((st.shortDetail||'').split(' - ')[0],date):st.shortDetail)};
+  });
+}
+async function hockeytechGames(L){
+  for(const key of L.keys){
+    const url=`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=scorebar&numberofdaysback=1&numberofdaysahead=1&key=${key}&client_code=${L.code}&fmt=json&lang=en`;
+    for(const u of [url,'https://corsproxy.io/?url='+encodeURIComponent(url)]){
+      try{
+        let txt=(await (await tfetch(u)).text()).trim().replace(/^\(/,'').replace(/\)$/,'');
+        const sb=JSON.parse(txt).SiteKit.Scorebar;
+        if(!Array.isArray(sb))continue;
+        return sb.map(g=>{
+          const fin=g.Final==='1'||/final/i.test(g.GameStatus||'');
+          const started=g.Started==='1'||(g.Period&&g.Period!=='0');
+          const state=fin?'post':(started?'in':'pre');
+          const date=new Date(g.GameDateISO8601||((g.Date||'')+'T'+(g.ScheduledTime||'00:00:00')));
+          const A=g.VisitorCode,H=g.HomeCode;
+          return {A,H,state,date,
+            line:state==='pre'?`${A} at ${H}`:`${A} ${g.VisitorGoals} – ${g.HomeGoals} ${H}`,
+            det:state==='pre'?preLabel(date):state==='post'?postLabel(/final/i.test(g.GameStatus||'')?g.GameStatus:'Final',date):((g.PeriodNameShort||g.Period||'')+' '+(g.GameClock||'')).trim()};
+        });
+      }catch(e){}
+    }
+  }
+  throw new Error('hockeytech unavailable');
+}
+async function sports(){
+  const boxes=await Promise.all(CFG.leagues.map(async L=>{
+    let games=[],failed=false;
+    try{games=await (L.type==='hockeytech'?hockeytechGames(L):espnGames(L))}catch(e){failed=true;console.warn('scores',L.label,e)}
+    if(L.teams&&L.teams.length)games=games.filter(g=>L.teams.includes(g.A)||L.teams.includes(g.H));
+    const rank={in:0,pre:1,post:2};
+    games.sort((a,b)=>rank[a.state]-rank[b.state]||a.date-b.date);
+    const body=failed?'<div class="none">Scores unavailable</div>':
+      (games.slice(0,4).map(g=>`<div class="g"><b>${g.line}</b><span class="${g.state==='in'?'live':''}">${g.det}</span></div>`).join('')||'<div class="none">No games right now</div>');
+    return `<div class="lg"><h3>${L.label}</h3>${body}</div>`;
+  }));
+  $('leagues').innerHTML=boxes.join('');
 }
 
 /* Keep pixels moving to avoid burn-in */
 setInterval(()=>{const x=(Math.random()*2-1)*.8,y=(Math.random()*2-1)*.8;$('shift').style.transform=`translate(${x}vw,${y}vh)`},300000);
 
-$('moontxt').textContent=moon();
-agenda();weather();news();sports();
+moon();weather();news();sports();
 setInterval(weather,900000);setInterval(news,900000);setInterval(sports,120000);
-setInterval(()=>{$('moontxt').textContent=moon()},3600000);
+setInterval(moon,3600000);
 </script>
 </body>
 </html>
