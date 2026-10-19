@@ -1,0 +1,172 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Shield Dashboard</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;600&display=swap" rel="stylesheet">
+<style>
+:root{--ink:#f4f6ff;--dim:rgba(235,240,255,.62);--glass:rgba(255,255,255,.07);--edge:rgba(255,255,255,.14)}
+*{box-sizing:border-box;margin:0}
+html,body{height:100%;background:#04050d;color:var(--ink);font-family:Manrope,"Helvetica Neue",Arial,sans-serif;overflow:hidden;cursor:none}
+.aurora{position:fixed;inset:0;overflow:hidden;z-index:0}
+.aurora i{position:absolute;width:60vw;height:60vw;border-radius:50%;filter:blur(90px);opacity:.55;animation:drift 50s ease-in-out infinite alternate}
+.aurora i:nth-child(1){background:#2b5cff;left:-15vw;top:-20vw}
+.aurora i:nth-child(2){background:#9a3dff;right:-20vw;top:5vw;animation-duration:65s}
+.aurora i:nth-child(3){background:#00d6b4;left:25vw;bottom:-35vw;opacity:.4;animation-duration:80s}
+@keyframes drift{to{transform:translate(12vw,8vh) scale(1.2)}}
+#shift{position:relative;z-index:1;height:100%;padding:4vh 4vw;display:grid;gap:2.2vh 1.6vw;
+ grid-template-columns:1.25fr 1fr 1fr;grid-template-rows:1.15fr 1fr 1fr;
+ grid-template-areas:"clock wx wx" "fc sun air" "news news sports";transition:transform 4s ease}
+.card{background:var(--glass);border:1px solid var(--edge);border-radius:2.2vh;padding:2.4vh 1.6vw;
+ backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%);overflow:hidden;min-width:0}
+.card h2{font-size:1.7vh;font-weight:600;color:var(--dim);margin-bottom:1.4vh;letter-spacing:.02em}
+#clock{grid-area:clock;background:none;border:none;backdrop-filter:none;padding:0;display:flex;flex-direction:column;justify-content:center}
+#time{font-size:15vh;font-weight:200;line-height:1;letter-spacing:-.03em}
+#time small{font-size:4vh;font-weight:300;margin-left:1vw;color:var(--dim)}
+#date{font-size:3.2vh;font-weight:300;color:var(--dim);margin-top:1.2vh}
+#wx{grid-area:wx;display:flex;align-items:center;gap:2vw}
+#wxicon{font-size:11vh}
+#temp{font-size:11vh;font-weight:200;line-height:1}
+#wxdesc{font-size:3vh;font-weight:300}
+#wxsub{font-size:2.1vh;color:var(--dim);margin-top:.6vh}
+#fc{grid-area:fc}.days{display:flex;justify-content:space-between;height:calc(100% - 3.5vh);align-items:center}
+.day{text-align:center;font-size:2vh}.day b{display:block;font-weight:400;color:var(--dim);margin-bottom:.6vh}
+.day span{display:block;font-size:4vh;margin:.4vh 0}.day em{font-style:normal;color:var(--dim)}
+#sun{grid-area:sun}#air{grid-area:air}
+.big{font-size:5.4vh;font-weight:200;line-height:1.1}.row{font-size:2.1vh;color:var(--dim);margin-top:.8vh}
+.moon{font-size:5vh;float:right}
+.meter{height:.9vh;border-radius:1vh;background:rgba(255,255,255,.12);margin-top:1.4vh;overflow:hidden}
+.meter div{height:100%;border-radius:1vh;background:linear-gradient(90deg,#00d6b4,#ffd84a,#ff5c7a);transition:width 1s}
+#news{grid-area:news}#sports{grid-area:sports}
+.head{font-size:2.9vh;font-weight:300;line-height:1.3;transition:opacity .8s}
+.head.sub{font-size:2.1vh;color:var(--dim);margin-top:1.1vh}.src{font-size:1.7vh;color:var(--dim);margin-top:1.4vh}
+.game{display:flex;justify-content:space-between;font-size:2.1vh;padding:.7vh 0;border-bottom:1px solid rgba(255,255,255,.08)}
+.game:last-child{border:0}.game span{color:var(--dim)}
+.live{color:#ff6b8a!important}
+#agenda{position:absolute;right:4vw;top:4vh;z-index:2;text-align:right;font-size:2.1vh;color:var(--dim);line-height:1.7}
+#agenda b{display:block;color:var(--ink);font-weight:400;font-size:2.3vh}
+</style>
+</head>
+<body>
+<div class="aurora"><i></i><i></i><i></i></div>
+<div id="agenda"></div>
+<main id="shift">
+ <section id="clock" class="card"><div id="time"></div><div id="date"></div></section>
+ <section id="wx" class="card"><div id="wxicon">⛅</div><div><div id="temp">--°</div><div id="wxdesc">Loading…</div><div id="wxsub"></div></div></section>
+ <section id="fc" class="card"><h2>Next 5 days</h2><div class="days"></div></section>
+ <section id="sun" class="card"><h2>Sun and moon</h2><div class="moon" id="moon"></div>
+  <div class="big" id="sunrise">--</div><div class="row">Sunrise</div>
+  <div class="big" id="sunset" style="margin-top:1.4vh">--</div><div class="row" id="moontxt">Sunset</div></section>
+ <section id="air" class="card"><h2>Air and UV</h2>
+  <div class="big" id="aqi">--</div><div class="row" id="aqitxt">Air quality</div><div class="meter"><div id="aqibar" style="width:0"></div></div>
+  <div class="big" id="uv" style="margin-top:1.6vh">--</div><div class="row">UV index today</div></section>
+ <section id="news" class="card"><h2>Headlines</h2><div class="head" id="h1"></div><div class="head sub" id="h2"></div><div class="src" id="hsrc"></div></section>
+ <section id="sports" class="card"><h2>Scores</h2><div id="games"></div></section>
+</main>
+<script>
+/* ===== SETTINGS: edit these ===== */
+const CFG={
+  city:'Woodstock', lat:43.13, lon:-80.75,
+  clock24:false,
+  newsFeed:'https://www.cbc.ca/webfeed/rss/rss-topstories', newsName:'CBC News',
+  leagues:[['hockey','nhl'],['basketball','nba'],['football','nfl'],['baseball','mlb']],
+  // Agenda: add your own, or leave empty. Format: {t:'3:30 PM', title:'Dentist'}
+  events:[{t:'Today',title:'Add your events in CFG.events'}]
+};
+/* ================================ */
+const $=id=>document.getElementById(id);
+const WX={0:['☀️','Clear'],1:['🌤️','Mostly clear'],2:['⛅','Partly cloudy'],3:['☁️','Overcast'],45:['🌫️','Fog'],48:['🌫️','Fog'],51:['🌦️','Light drizzle'],53:['🌦️','Drizzle'],55:['🌧️','Heavy drizzle'],61:['🌧️','Light rain'],63:['🌧️','Rain'],65:['🌧️','Heavy rain'],71:['🌨️','Light snow'],73:['❄️','Snow'],75:['❄️','Heavy snow'],77:['🌨️','Snow grains'],80:['🌦️','Showers'],81:['🌧️','Showers'],82:['⛈️','Heavy showers'],85:['🌨️','Snow showers'],86:['❄️','Snow showers'],95:['⛈️','Thunderstorm'],96:['⛈️','Thunderstorm'],99:['⛈️','Thunderstorm']};
+const wx=c=>WX[c]||['⛅','Mixed'];
+const fmt=d=>d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:!CFG.clock24});
+
+function tick(){
+  const n=new Date();
+  let t=n.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:!CFG.clock24});
+  let ap='';const m=t.match(/\s?([AP]M)$/i);
+  if(m){ap=m[1];t=t.replace(/\s?[AP]M$/i,'')}
+  $('time').innerHTML=t+(ap?'<small>'+ap+'</small>':'');
+  $('date').textContent=n.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
+}
+setInterval(tick,1000);tick();
+
+function moon(){
+  const p=(((Date.now()-Date.UTC(2000,0,6,18,14))/864e5)/29.530588853%1+1)%1;
+  const names=['New moon','Waxing crescent','First quarter','Waxing gibbous','Full moon','Waning gibbous','Last quarter','Waning crescent'];
+  const i=Math.round(p*8)%8, lit=Math.round((1-Math.cos(2*Math.PI*p))/2*100);
+  $('moon').textContent=['🌑','🌒','🌓','🌔','🌕','🌖','🌗','🌘'][i];
+  return names[i]+', '+lit+'% lit';
+}
+
+async function weather(){
+  try{
+    const u=`https://api.open-meteo.com/v1/forecast?latitude=${CFG.lat}&longitude=${CFG.lon}&current=temperature_2m,apparent_temperature,weather_code&daily=weather_code,temperature_2m_max,temperature_2m_min,sunrise,sunset,uv_index_max&timezone=auto`;
+    const d=await (await fetch(u)).json(), c=d.current, dl=d.daily;
+    const [ic,tx]=wx(c.weather_code);
+    $('wxicon').textContent=ic;$('temp').textContent=Math.round(c.temperature_2m)+'°';
+    $('wxdesc').textContent=tx;
+    $('wxsub').textContent=`${CFG.city} · Feels like ${Math.round(c.apparent_temperature)}° · High ${Math.round(dl.temperature_2m_max[0])}° Low ${Math.round(dl.temperature_2m_min[0])}°`;
+    $('fc').querySelector('.days').innerHTML=[1,2,3,4,5].map(i=>{
+      const day=new Date(dl.time[i]+'T12:00').toLocaleDateString([],{weekday:'short'});
+      return `<div class="day"><b>${day}</b><span>${wx(dl.weather_code[i])[0]}</span>${Math.round(dl.temperature_2m_max[i])}° <em>${Math.round(dl.temperature_2m_min[i])}°</em></div>`}).join('');
+    $('sunrise').textContent=fmt(new Date(dl.sunrise[0]));$('sunset').textContent=fmt(new Date(dl.sunset[0]));
+    $('uv').textContent=Math.round(dl.uv_index_max[0]*10)/10;
+  }catch(e){console.warn('weather',e)}
+  try{
+    const a=await (await fetch(`https://air-quality-api.open-meteo.com/v1/air-quality?latitude=${CFG.lat}&longitude=${CFG.lon}&current=us_aqi`)).json();
+    const v=Math.round(a.current.us_aqi);
+    $('aqi').textContent=v;
+    $('aqitxt').textContent='Air quality · '+(v<=50?'Good':v<=100?'Moderate':v<=150?'Unhealthy for some':'Unhealthy');
+    $('aqibar').style.width=Math.min(100,v/2)+'%';
+  }catch(e){console.warn('air',e)}
+}
+
+let heads=[],hi=0;
+async function news(){
+  try{
+    const d=await (await fetch('https://api.rss2json.com/v1/api.json?rss_url='+encodeURIComponent(CFG.newsFeed))).json();
+    heads=d.items.map(i=>i.title);hi=0;showHead();
+  }catch(e){$('h1').textContent='Headlines are unavailable right now.';console.warn('news',e)}
+}
+function showHead(){
+  if(!heads.length)return;
+  const a=$('h1'),b=$('h2');a.style.opacity=b.style.opacity=0;
+  setTimeout(()=>{a.textContent=heads[hi%heads.length];b.textContent=heads[(hi+1)%heads.length];
+    $('hsrc').textContent=CFG.newsName;a.style.opacity=1;b.style.opacity=1;hi+=2},800);
+}
+setInterval(showHead,12000);
+
+async function sports(){
+  const all=[];
+  await Promise.all(CFG.leagues.map(async([s,l])=>{
+    try{
+      const d=await (await fetch(`https://site.api.espn.com/apis/site/v2/sports/${s}/${l}/scoreboard`)).json();
+      (d.events||[]).forEach(e=>{
+        const c=e.competitions[0].competitors, st=e.status.type;
+        const away=c.find(x=>x.homeAway==='away'),home=c.find(x=>x.homeAway==='home');
+        all.push({l:l.toUpperCase(),state:st.state,det:st.shortDetail,
+          line:`${away.team.abbreviation} ${st.state==='pre'?'':away.score} – ${st.state==='pre'?'':home.score} ${home.team.abbreviation}`.replace('  ',' '),
+          date:new Date(e.date)});
+      });
+    }catch(e){}
+  }));
+  const rank={in:0,pre:1,post:2};
+  all.sort((a,b)=>rank[a.state]-rank[b.state]||a.date-b.date);
+  $('games').innerHTML=all.slice(0,5).map(g=>`<div class="game"><b style="font-weight:400">${g.l} · ${g.line}</b><span class="${g.state==='in'?'live':''}">${g.det}</span></div>`).join('')||'<div class="row">No games on the schedule.</div>';
+}
+
+function agenda(){
+  $('agenda').innerHTML=CFG.events.slice(0,3).map(e=>`<b>${e.title}</b>${e.t}`).join('<br>');
+}
+
+/* Keep pixels moving to avoid burn-in */
+setInterval(()=>{const x=(Math.random()*2-1)*.8,y=(Math.random()*2-1)*.8;$('shift').style.transform=`translate(${x}vw,${y}vh)`},300000);
+
+$('moontxt').textContent=moon();
+agenda();weather();news();sports();
+setInterval(weather,900000);setInterval(news,900000);setInterval(sports,120000);
+setInterval(()=>{$('moontxt').textContent=moon()},3600000);
+</script>
+</body>
+</html>
