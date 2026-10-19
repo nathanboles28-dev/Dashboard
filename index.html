@@ -7,14 +7,18 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Manrope:wght@200;300;400;600&display=swap" rel="stylesheet">
 <style>
-:root{--ink:#f4f6ff;--dim:rgba(235,240,255,.62);--glass:rgba(255,255,255,.07);--edge:rgba(255,255,255,.14)}
+:root{--ink:#fbf6f2;--dim:rgba(250,240,232,.68);--glass:rgba(255,255,255,.075);--edge:rgba(255,255,255,.15);
+ --bg:#0c0709;--b1:#ff7a45;--b2:#c2255c;--b3:#7a3aa8;--glow:.5}
+:root[data-theme="graphite"]{--ink:#f5f6f8;--dim:rgba(235,238,244,.66);--bg:#08090b;--b1:#56627a;--b2:#2e3647;--b3:#6b7a94;--glow:.42}
+:root[data-theme="forest"]{--ink:#f1f8f4;--dim:rgba(230,243,236,.66);--bg:#040b08;--b1:#12895f;--b2:#0e5c46;--b3:#2a7da0;--glow:.5}
+:root[data-theme="midnight"]{--ink:#f4f6ff;--dim:rgba(235,240,255,.62);--bg:#04050d;--b1:#2b5cff;--b2:#9a3dff;--b3:#00d6b4;--glow:.55}
 *{box-sizing:border-box;margin:0}
-html,body{height:100%;background:#04050d;color:var(--ink);font-family:Manrope,"Helvetica Neue",Arial,sans-serif;overflow:hidden;cursor:none}
+html,body{height:100%;background:var(--bg);color:var(--ink);font-family:Manrope,"Helvetica Neue",Arial,sans-serif;overflow:hidden;cursor:none}
 .aurora{position:fixed;inset:0;overflow:hidden;z-index:0}
-.aurora i{position:absolute;width:60vw;height:60vw;border-radius:50%;filter:blur(90px);opacity:.55;animation:drift 50s ease-in-out infinite alternate}
-.aurora i:nth-child(1){background:#2b5cff;left:-15vw;top:-20vw}
-.aurora i:nth-child(2){background:#9a3dff;right:-20vw;top:5vw;animation-duration:65s}
-.aurora i:nth-child(3){background:#00d6b4;left:25vw;bottom:-35vw;opacity:.4;animation-duration:80s}
+.aurora i{position:absolute;width:60vw;height:60vw;border-radius:50%;filter:blur(90px);opacity:var(--glow);animation:drift 50s ease-in-out infinite alternate}
+.aurora i:nth-child(1){background:var(--b1);left:-15vw;top:-20vw}
+.aurora i:nth-child(2){background:var(--b2);right:-20vw;top:5vw;animation-duration:65s}
+.aurora i:nth-child(3){background:var(--b3);left:25vw;bottom:-35vw;opacity:calc(var(--glow)*.75);animation-duration:80s}
 @keyframes drift{to{transform:translate(12vw,8vh) scale(1.2)}}
 #shift{position:relative;z-index:1;height:100%;padding:4vh 4vw;display:grid;gap:2.2vh 1.6vw;
  grid-template-columns:1.1fr 1fr 1fr;grid-template-rows:1.05fr 1.05fr 1fr;
@@ -47,7 +51,7 @@ html,body{height:100%;background:#04050d;color:var(--ink);font-family:Manrope,"H
 .head.sub{font-size:1.9vh;color:var(--dim);margin-top:1.1vh;-webkit-line-clamp:1}
 .src{font-size:1.6vh;color:var(--dim);margin-top:1.2vh}
 .leagues{display:flex;gap:1vw;height:calc(100% - 3vh)}
-.lg{flex:1;min-width:0;background:rgba(255,255,255,.05);border-radius:1.6vh;padding:1.2vh .9vw;overflow:hidden}
+.lg{flex:1;min-width:0;background:rgba(255,255,255,.055);border-radius:1.6vh;padding:1.2vh .9vw;overflow:hidden}
 .lg h3{font-size:1.8vh;font-weight:600;margin-bottom:.7vh}
 .g{display:flex;justify-content:space-between;gap:.6vw;font-size:1.85vh;padding:.45vh 0;white-space:nowrap}
 .g b{font-weight:400;overflow:hidden;text-overflow:ellipsis}.g span{color:var(--dim);font-size:1.6vh;flex:none;align-self:center}
@@ -76,6 +80,8 @@ html,body{height:100%;background:#04050d;color:var(--ink);font-family:Manrope,"H
 const CFG={
   city:'Woodstock', lat:43.13, lon:-80.75,
   clock24:false,
+  // Colour theme: 'dusk' (warm amber and rose), 'graphite' (neutral dark), 'forest' (green), 'midnight' (the original blue and violet)
+  theme:'dusk',
   // News: every feed that loads is mixed together. Feeds that fail are skipped.
   newsFeeds:[
     {name:'Sportsnet',     url:'https://www.sportsnet.ca/feed/'},
@@ -95,7 +101,8 @@ const CFG={
 };
 /* ================================ */
 const $=id=>document.getElementById(id);
-const tfetch=(u,ms=8000)=>{const c=new AbortController();const t=setTimeout(()=>c.abort(),ms);return fetch(u,{signal:c.signal}).finally(()=>clearTimeout(t))};
+document.documentElement.dataset.theme=CFG.theme||'dusk';
+const tfetch=(u,ms=8000)=>{let t;return Promise.race([fetch(u),new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error('timeout')),ms)})]).finally(()=>clearTimeout(t))};
 const WX={0:['☀️','Clear'],1:['🌤️','Mostly clear'],2:['⛅','Partly cloudy'],3:['☁️','Overcast'],45:['🌫️','Fog'],48:['🌫️','Fog'],51:['🌦️','Light drizzle'],53:['🌦️','Drizzle'],55:['🌧️','Heavy drizzle'],61:['🌧️','Light rain'],63:['🌧️','Rain'],65:['🌧️','Heavy rain'],71:['🌨️','Light snow'],73:['❄️','Snow'],75:['❄️','Heavy snow'],77:['🌨️','Snow grains'],80:['🌦️','Showers'],81:['🌧️','Showers'],82:['⛈️','Heavy showers'],85:['🌨️','Snow showers'],86:['❄️','Snow showers'],95:['⛈️','Thunderstorm'],96:['⛈️','Thunderstorm'],99:['⛈️','Thunderstorm']};
 const wx=c=>WX[c]||['⛅','Mixed'];
 const fmt=d=>d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:!CFG.clock24});
@@ -193,12 +200,14 @@ async function espnGames(L){
 }
 async function hockeytechGames(L){
   for(const key of L.keys){
-    const url=`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=scorebar&numberofdaysback=1&numberofdaysahead=1&key=${key}&client_code=${L.code}&fmt=json&lang=en`;
-    for(const u of [url,'https://corsproxy.io/?url='+encodeURIComponent(url)]){
+    const url=`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=scorebar&numberofdaysback=0&numberofdaysahead=0&key=${key}&client_code=${L.code}&fmt=json&lang=en`;
+    const enc=encodeURIComponent(url);
+    for(const u of [url,'https://api.allorigins.win/raw?url='+enc,'https://corsproxy.io/?url='+enc]){
       try{
-        let txt=(await (await tfetch(u)).text()).trim().replace(/^\(/,'').replace(/\)$/,'');
-        const sb=JSON.parse(txt).SiteKit.Scorebar;
-        if(!Array.isArray(sb))continue;
+        const txt=(await (await tfetch(u)).text()).trim().replace(/^\(/,'').replace(/\)$/,'');
+        const j=JSON.parse(txt);
+        if(!j||!j.SiteKit)continue;            /* bad key or error reply: try the next one */
+        const sb=Array.isArray(j.SiteKit.Scorebar)?j.SiteKit.Scorebar:[];   /* empty day = no games */
         return sb.map(g=>{
           const fin=g.Final==='1'||/final/i.test(g.GameStatus||'');
           const started=g.Started==='1'||(g.Period&&g.Period!=='0');
@@ -222,7 +231,7 @@ async function sports(){
     const rank={in:0,pre:1,post:2};
     games.sort((a,b)=>rank[a.state]-rank[b.state]||a.date-b.date);
     const body=failed?'<div class="none">Scores unavailable</div>':
-      (games.slice(0,4).map(g=>`<div class="g"><b>${g.line}</b><span class="${g.state==='in'?'live':''}">${g.det}</span></div>`).join('')||'<div class="none">No games right now</div>');
+      (games.slice(0,4).map(g=>`<div class="g"><b>${g.line}</b><span class="${g.state==='in'?'live':''}">${g.det}</span></div>`).join('')||'<div class="none">No games today</div>');
     return `<div class="lg"><h3>${L.label}</h3>${body}</div>`;
   }));
   $('leagues').innerHTML=boxes.join('');
