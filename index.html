@@ -27,7 +27,7 @@ html,body{height:100%;background:var(--bg);color:var(--ink);font-family:Manrope,
  backdrop-filter:blur(28px) saturate(140%);-webkit-backdrop-filter:blur(28px) saturate(140%);overflow:hidden;min-width:0;min-height:0}
 .card h2{font-size:1.7vh;font-weight:600;color:var(--dim);margin-bottom:1.2vh;letter-spacing:.02em}
 #clock{grid-area:clock;background:none;border:none;backdrop-filter:none;padding:0;display:flex;flex-direction:column;justify-content:center}
-#time{font-size:15vh;font-weight:200;line-height:1;letter-spacing:-.03em}
+#time{white-space:nowrap;font-size:14vh;font-weight:200;line-height:1;letter-spacing:-.03em}
 #time small{font-size:4vh;font-weight:300;margin-left:1vw;color:var(--dim)}
 #date{font-size:3.2vh;font-weight:300;color:var(--dim);margin-top:1.2vh}
 #wx{grid-area:wx;display:flex;align-items:center;gap:2vw}
@@ -57,6 +57,7 @@ html,body{height:100%;background:var(--bg);color:var(--ink);font-family:Manrope,
 .g b{font-weight:400;overflow:hidden;text-overflow:ellipsis}.g span{color:var(--dim);font-size:1.6vh;flex:none;align-self:center}
 .g .live{color:#ff6b8a}
 .none{font-size:1.8vh;color:var(--dim)}
+.why{font-size:1.4vh;color:var(--dim);opacity:.75;margin-top:.6vh;line-height:1.3}
 </style>
 </head>
 <body>
@@ -95,7 +96,7 @@ const CFG={
   // teams: abbreviations to show only those games, e.g. ['TOR'] or ['LDN']. [] shows all games.
   leagues:[
     {type:'espn', sport:'baseball', league:'mlb', label:'MLB', teams:[]},
-    {type:'hockeytech', code:'ohl', keys:['f1aa699db3d81487','4767a11864244441'], label:'OHL', teams:[]},
+    {type:'hockeytech', code:'ohl', keys:['f1aa699db3d81487','4767a11864244441','2976319eb44abe94'], label:'OHL', teams:[]},
     {type:'espn', sport:'hockey', league:'nhl', label:'NHL', teams:[]}
   ]
 };
@@ -105,14 +106,12 @@ document.documentElement.dataset.theme=CFG.theme||'dusk';
 const tfetch=(u,ms=8000)=>{let t;return Promise.race([fetch(u),new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error('timeout')),ms)})]).finally(()=>clearTimeout(t))};
 const WX={0:['☀️','Clear'],1:['🌤️','Mostly clear'],2:['⛅','Partly cloudy'],3:['☁️','Overcast'],45:['🌫️','Fog'],48:['🌫️','Fog'],51:['🌦️','Light drizzle'],53:['🌦️','Drizzle'],55:['🌧️','Heavy drizzle'],61:['🌧️','Light rain'],63:['🌧️','Rain'],65:['🌧️','Heavy rain'],71:['🌨️','Light snow'],73:['❄️','Snow'],75:['❄️','Heavy snow'],77:['🌨️','Snow grains'],80:['🌦️','Showers'],81:['🌧️','Showers'],82:['⛈️','Heavy showers'],85:['🌨️','Snow showers'],86:['❄️','Snow showers'],95:['⛈️','Thunderstorm'],96:['⛈️','Thunderstorm'],99:['⛈️','Thunderstorm']};
 const wx=c=>WX[c]||['⛅','Mixed'];
-const fmt=d=>d.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:!CFG.clock24});
+const fmt=d=>{const h=d.getHours(),m=String(d.getMinutes()).padStart(2,'0');return CFG.clock24?String(h).padStart(2,'0')+':'+m:(h%12||12)+':'+m+' '+(h<12?'AM':'PM')};
 
 function tick(){
   const n=new Date();
-  let t=n.toLocaleTimeString([],{hour:'numeric',minute:'2-digit',hour12:!CFG.clock24});
-  let ap='';const m=t.match(/\s?([AP]M)$/i);
-  if(m){ap=m[1];t=t.replace(/\s?[AP]M$/i,'')}
-  $('time').innerHTML=t+(ap?'<small>'+ap+'</small>':'');
+  const mm=String(n.getMinutes()).padStart(2,'0'),h=n.getHours();
+  $('time').innerHTML=CFG.clock24?String(h).padStart(2,'0')+':'+mm:(h%12||12)+':'+mm+'<small>'+(h<12?'AM':'PM')+'</small>';
   $('date').textContent=n.toLocaleDateString([],{weekday:'long',month:'long',day:'numeric'});
 }
 setInterval(tick,1000);tick();
@@ -170,7 +169,8 @@ let heads=[],hi=0;
 async function news(){
   const lists=await Promise.all(CFG.newsFeeds.map(async f=>(await loadFeed(f.url)).slice(0,12).map(t=>({t,s:f.name}))));
   const mixed=[],seen=new Set();
-  for(let i=0;i<12;i++)lists.forEach(l=>{const h=l[i];if(h&&!seen.has(h.t)){seen.add(h.t);mixed.push(h)}});
+  const junk=t=>t.length<15||/featured\s+\d+\s+item/i.test(t);
+  for(let i=0;i<12;i++)lists.forEach(l=>{const h=l[i];if(h&&!junk(h.t)&&!seen.has(h.t)){seen.add(h.t);mixed.push(h)}});
   if(mixed.length){heads=mixed;hi=0;showHead();return}
   if(!heads.length){$('h1').textContent='Headlines couldn’t load. Retrying soon.';$('h2').textContent='';setTimeout(news,120000)}
 }
@@ -199,15 +199,18 @@ async function espnGames(L){
   });
 }
 async function hockeytechGames(L){
+  const why={};
   for(const key of L.keys){
-    const url=`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=scorebar&numberofdaysback=0&numberofdaysahead=0&key=${key}&client_code=${L.code}&fmt=json&lang=en`;
+    const url=`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=scorebar&numberofdaysback=1&numberofdaysahead=1&key=${key}&client_code=${L.code}&fmt=json&lang=en`;
     const enc=encodeURIComponent(url);
-    for(const u of [url,'https://api.allorigins.win/raw?url='+enc,'https://corsproxy.io/?url='+enc]){
+    const routes=[['direct',url],['proxy A','https://api.allorigins.win/raw?url='+enc],['proxy B','https://corsproxy.io/?url='+enc],['proxy C','https://api.codetabs.com/v1/proxy?quest='+url]];
+    for(const [name,u] of routes){
       try{
         const txt=(await (await tfetch(u)).text()).trim().replace(/^\(/,'').replace(/\)$/,'');
-        const j=JSON.parse(txt);
-        if(!j||!j.SiteKit)continue;            /* bad key or error reply: try the next one */
-        const sb=Array.isArray(j.SiteKit.Scorebar)?j.SiteKit.Scorebar:[];   /* empty day = no games */
+        let j;try{j=JSON.parse(txt)}catch(e){why[name]='not JSON';continue}
+        if(!j||!j.SiteKit){why[name]='bad reply';continue}
+        const sb=Array.isArray(j.SiteKit.Scorebar)?j.SiteKit.Scorebar:[];
+        const today=new Date().toDateString();
         return sb.map(g=>{
           const fin=g.Final==='1'||/final/i.test(g.GameStatus||'');
           const started=g.Started==='1'||(g.Period&&g.Period!=='0');
@@ -217,20 +220,20 @@ async function hockeytechGames(L){
           return {A,H,state,date,
             line:state==='pre'?`${A} at ${H}`:`${A} ${g.VisitorGoals} – ${g.HomeGoals} ${H}`,
             det:state==='pre'?preLabel(date):state==='post'?postLabel(/final/i.test(g.GameStatus||'')?g.GameStatus:'Final',date):((g.PeriodNameShort||g.Period||'')+' '+(g.GameClock||'')).trim()};
-        });
-      }catch(e){}
+        }).filter(g=>g.date.toDateString()===today||g.state==='in');
+      }catch(e){why[name]=(e&&e.message==='timeout')?'timed out':'blocked'}
     }
   }
-  throw new Error('hockeytech unavailable');
+  throw new Error(Object.entries(why).map(([k,v])=>k+': '+v).join(' · '));
 }
 async function sports(){
   const boxes=await Promise.all(CFG.leagues.map(async L=>{
-    let games=[],failed=false;
-    try{games=await (L.type==='hockeytech'?hockeytechGames(L):espnGames(L))}catch(e){failed=true;console.warn('scores',L.label,e)}
+    let games=[],failed=false,msg='';
+    try{games=await (L.type==='hockeytech'?hockeytechGames(L):espnGames(L))}catch(e){failed=true;msg=e.message||'error';console.warn('scores',L.label,e)}
     if(L.teams&&L.teams.length)games=games.filter(g=>L.teams.includes(g.A)||L.teams.includes(g.H));
     const rank={in:0,pre:1,post:2};
     games.sort((a,b)=>rank[a.state]-rank[b.state]||a.date-b.date);
-    const body=failed?'<div class="none">Scores unavailable</div>':
+    const body=failed?'<div class="none">Scores unavailable</div><div class="why">'+msg+'</div>':
       (games.slice(0,4).map(g=>`<div class="g"><b>${g.line}</b><span class="${g.state==='in'?'live':''}">${g.det}</span></div>`).join('')||'<div class="none">No games today</div>');
     return `<div class="lg"><h3>${L.label}</h3>${body}</div>`;
   }));
