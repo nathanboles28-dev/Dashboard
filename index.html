@@ -369,44 +369,49 @@ async function standings(){
   }catch(e){stFail('stdNHL',e)}
   const OL=CFG.leagues.find(l=>l.type==='hockeytech');
   if(OL)try{
-    let rows=null,why='';
-    const parse=t=>{t=t.trim();if(!/^[\[{]/.test(t)){const a=t.indexOf('('),b=t.lastIndexOf(')');if(a>=0&&b>a)t=t.slice(a+1,b)}return JSON.parse(t)};
-    const race=fns=>new Promise((res,rej)=>{let n=fns.length;const errs=[];fns.forEach(f=>f().then(res,e=>{errs.push((e&&e.message)||'error');if(--n===0)rej(new Error(errs.join(' / ')))}))});
-    const get=url=>{const enc=encodeURIComponent(url),px=u=>async()=>parse(await (await tfetch(u,15000)).text());
-      return race([()=>jsonpObj(url,15000),px('https://api.allorigins.win/raw?url='+enc),px('https://corsproxy.io/?url='+enc),px('https://api.codetabs.com/v1/proxy?quest='+url)])};
-    const collect=j=>{const out=[];let gid=0;
-      (function w(n,lab,g){
-        if(Array.isArray(n))return n.forEach(x=>w(x,lab,g));
+    const W=['ER','GUE','KIT','LDN','OS','FLNT','SAG','SAR','SOO','SSM','WSR'];   /* OHL Western Conference */
+    const parse=t=>{t=String(t).trim();if(!/^[\[{]/.test(t)){const a=t.indexOf('('),b=t.lastIndexOf(')');if(a>=0&&b>a)t=t.slice(a+1,b)}return JSON.parse(t)};
+    const collect=j=>{const out=[];
+      (function w(n,lab){
+        if(Array.isArray(n))return n.forEach(x=>w(x,lab));
         if(!n||typeof n!=='object')return;
-        if(n.headers&&Array.isArray(n.data))g=++gid;
-        if(n.headers&&n.headers.name&&typeof n.headers.name==='object')lab=n.headers.name.label||n.headers.name.title||lab;
-        const l=[n.title,n.name,n.conference_name,n.conference,n.header,n.section_name].find(v=>typeof v==='string'&&/west|east/i.test(v));if(l)lab=l;
+        if(n.headers&&n.headers.name&&typeof n.headers.name==='object'){const h=n.headers.name;lab=h.label||h.title||(h.properties&&(h.properties.label||h.properties.title))||lab}
+        const l=[n.title,n.name,n.conference_name,n.conference,n.header,n.section_name,n.label].find(v=>typeof v==='string'&&/west|east|central|midwest/i.test(v));if(l)lab=l;
         const r=n.row||n;
-        if(r.points!==undefined&&typeof r.points!=='object'&&(r.team_code||r.name||r.team_name)){out.push({c:r.team_code||r.name||r.team_name,gp:r.games_played||r.gp||'',pts:+r.points,ctx:String(r.conference_name||r.conference||lab||''),g:g||0});return}
-        Object.values(n).forEach(v=>w(v,lab,g));
-      })(j,'',0);return out};
-    for(const key of (OL.goodKey?[OL.goodKey]:OL.keys)){
-      let sid=OL.seasonId||'';
-      if(!sid)try{const sj=await get(`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=seasons&key=${key}&client_code=${OL.code}&fmt=json`);
-        const ss=((sj.SiteKit||{}).Seasons||[]).filter(z=>String(z.playoff)!=='1'&&!/pre/i.test(z.season_name||''));
-        if(ss.length)sid=String(Math.max(...ss.map(z=>+z.season_id)))}catch(e){}
-      const base=`https://lscluster.hockeytech.com/feed/index.php?feed=statviewfeed&view=teams&groupTeamsBy=conference&context=overall&season=${sid}&special=false&key=${key}&client_code=${OL.code}&league_id=1&lang=en&division=-1&sort=points`;
-      for(const url of [base+'&site_id=2',base+'&site_id=0',`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=statviewtype&stat=conference&type=standings&season_id=${sid}&key=${key}&client_code=${OL.code}&fmt=json&lang=en`]){
-        const vn=(url.includes('site_id=2')?'A':url.includes('site_id=0')?'B':'C');
-        try{
-          const found=collect(await get(url));
-          if(!found.length){why+=(why?' · ':'')+vn+': empty reply (season '+(sid||'?')+')';continue}
-          let west=found.filter(r=>/west/i.test(r.ctx));
-          if(!west.length){const W=['GUE','SOO','LDN','KIT','SAG','FLNT','SAR','ER','WSR','OS'],gs={};found.forEach(r=>{(gs[r.g]=gs[r.g]||[]).push(r)});
-            const best=Object.values(gs).map(a=>[a.filter(r=>W.includes(r.c)).length,a]).sort((a,b)=>b[0]-a[0])[0];if(best&&best[0]>=3)west=best[1]}
-          if(!west.length){why+=(why?' · ':'')+vn+': no Western label; saw: '+[...new Set(found.map(r=>r.ctx||'-'))].slice(0,4).join(', ');continue}
-          rows=west;break;
-        }catch(e){why+=(why?' · ':'')+vn+': '+(e.message||'error')}
-      }
-      if(rows)break;
+        if(r.points!==undefined&&typeof r.points!=='object'&&(r.team_code||r.team_name||r.name)){
+          out.push({c:String(r.team_code||r.team_name||r.name).toUpperCase(),gp:r.games_played||r.gp||'',pts:+r.points||0,ctx:String(r.conference_name||r.conference||lab||'')});return}
+        Object.values(n).forEach(v=>w(v,lab));
+      })(j,'');return out};
+    /* every route races; a reply only "wins" if it actually holds team rows, so a junk proxy reply can't end the search */
+    const get=url=>{const enc=encodeURIComponent(url);
+      const routes=[['direct',()=>jsonpObj(url,15000)],['proxy A',async()=>parse(await (await tfetch('https://api.allorigins.win/raw?url='+enc,15000)).text())],
+        ['proxy B',async()=>parse(await (await tfetch('https://corsproxy.io/?url='+enc,15000)).text())],['proxy C',async()=>parse(await (await tfetch('https://api.codetabs.com/v1/proxy?quest='+url,15000)).text())]];
+      return new Promise((res,rej)=>{let n=routes.length;const errs=[];
+        routes.forEach(([nm,f])=>f().then(j=>{const rows=collect(j);if(rows.length)res(rows);else throw new Error('no teams')})
+          .catch(e=>{errs.push(nm+' '+((e&&e.message)||'error'));if(--n===0)rej(new Error(errs.join(', ')))}))})};
+    const seasonsFor=async key=>{const out=[];if(OL.seasonId)out.push(String(OL.seasonId));
+      try{const enc=u=>encodeURIComponent(u),u=`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=seasons&key=${key}&client_code=${OL.code}&fmt=json`;
+        let sj;try{sj=await jsonpObj(u,10000)}catch(e){sj=parse(await (await tfetch('https://api.allorigins.win/raw?url='+enc(u),10000)).text())}
+        const ss=((sj.SiteKit||{}).Seasons||[]).filter(z=>String(z.playoff)!=='1'&&String(z.career)!=='0'&&!/pre|exhib/i.test(z.season_name||''));
+        if(ss.length)out.push(String(Math.max(...ss.map(z=>+z.season_id))))}catch(e){}
+      return [...new Set(out)]};
+    const urlsFor=(key,sid)=>{const c=`&season=${sid}&special=false&key=${key}&client_code=${OL.code}&lang=en&division=-1&sort=points&context=overall`,b='https://lscluster.hockeytech.com/feed/index.php?feed=statviewfeed&view=teams';
+      return [b+'&groupTeamsBy=conference&site_id=2&league_id=1'+c, b+'&groupTeamsBy=conference&site_id=0&league_id='+c, b+'&groupTeamsBy=division&site_id=2&league_id='+c,
+        `https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=statviewtype&stat=conference&type=standings&season_id=${sid}&key=${key}&client_code=${OL.code}&fmt=json&lang=en`]};
+    let rows=null;const why=[];
+    const tries=OL.goodUrl?[OL.goodUrl]:[];
+    if(!tries.length)for(const key of OL.keys)for(const sid of await seasonsFor(key))tries.push(...urlsFor(key,sid));
+    for(const url of tries){
+      try{
+        const found=await get(url);
+        let west=found.filter(r=>/west/i.test(r.ctx));
+        if(!west.length)west=found.filter(r=>W.includes(r.c));
+        if(!west.length){why.push('teams found but none Western ('+found.slice(0,4).map(r=>r.c).join(',')+')');continue}
+        rows=west;OL.goodUrl=url;break;
+      }catch(e){why.push((url.match(/season(?:_id)?=(\d*)/)||[])[1]+': '+e.message)}
     }
-    if(!rows)throw new Error(why||'failed');
-    const seen=new Set();rows=rows.filter(r=>!seen.has(r.c)&&seen.add(r.c)).sort((a,b)=>b.pts-a.pts);
+    if(!rows){OL.goodUrl=null;throw new Error([...new Set(why)].slice(0,3).join(' · ')||'failed')}
+    const seen=new Set();rows=rows.filter(r=>!seen.has(r.c)&&seen.add(r.c)).sort((a,b)=>b.pts-a.pts||a.gp-b.gp);
     $('stdOHL').innerHTML=stHTML(rows,fav(OL));$('stdOHL').style.gridTemplateColumns='';
   }catch(e){stFail('stdOHL',e)}
 }
@@ -434,7 +439,7 @@ setInterval(radar,300000);
 /* Keep pixels moving to avoid burn-in */
 setInterval(()=>{const x=(Math.random()*2-1)*.8,y=(Math.random()*2-1)*.8;$('shift').style.transform=`translate(${x}vw,${y}vh)`},300000);
 
-document.getElementById('ver').textContent='build 12:55 groups';
+document.getElementById('ver').textContent='build OHL standings fix';
 moon();weather();sportsLoop();radar();
 setInterval(weather,900000);
 setInterval(moon,3600000);
