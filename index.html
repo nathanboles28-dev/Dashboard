@@ -253,9 +253,10 @@ async function hockeytechGames(L,ahead=1,all=false){
           const per=parseInt(g.Period,10)||0,clock=(g.GameClock||'').trim();
           const fin=g.Final==='1'||/final/i.test(g.GameStatus||'')||['3','4'].includes(String(g.Status))||['3','4'].includes(String(g.GameStatus))||(per>=3&&/^0?0:00$/.test(clock));
           const started=g.Started==='1'||String(g.Status)==='2'||String(g.GameStatus)==='2'||per>0;
-          const state=fin?'post':(started?'in':'pre');
+          const gsx=String(g.GameStatus!==undefined?g.GameStatus:g.Status),known={'1':'pre','2':'in','3':'post','4':'post'};
+          const state=g.Final==='1'?'post':(known[gsx]||(fin?'post':(started?'in':'pre')));
           const date=htDate(g);if(g.SeasonID)L.seasonId=g.SeasonID;
-          const A=g.VisitorCode,H=g.HomeCode,perTxt=g.PeriodNameShort||perName(per);
+          const A=g.VisitorCode,H=g.HomeCode,perTxt=(g.PeriodNameShort&&!/^\d+$/.test(g.PeriodNameShort))?g.PeriodNameShort:perName(per);
           const brk=state==='in'&&(clockSecs(clock)===null||(clock==='00:00'&&per<3));
           return {id:g.ID||(A+H+g.Date),A,H,nA:A,nH:H,lA:g.VisitorLogo||'',lH:g.HomeLogo||'',sA:g.VisitorGoals,sH:g.HomeGoals,state,date,
             line:state==='pre'?`${A} at ${H}`:`${A} ${g.VisitorGoals} – ${g.HomeGoals} ${H}`,
@@ -368,9 +369,10 @@ async function standings(){
       (function w(n,lab){
         if(Array.isArray(n))return n.forEach(x=>w(x,lab));
         if(!n||typeof n!=='object')return;
+        if(n.headers&&n.headers.name&&typeof n.headers.name==='object')lab=n.headers.name.label||n.headers.name.title||lab;
         const l=[n.title,n.name,n.conference_name,n.conference,n.header,n.section_name].find(v=>typeof v==='string'&&/west|east/i.test(v));if(l)lab=l;
         const r=n.row||n;
-        if(r.points!==undefined&&(r.team_code||r.name||r.team_name)){out.push({c:r.team_code||r.name||r.team_name,gp:r.games_played||r.gp||'',pts:+r.points,ctx:String(r.conference_name||r.conference||lab||'')});return}
+        if(r.points!==undefined&&typeof r.points!=='object'&&(r.team_code||r.name||r.team_name)){out.push({c:r.team_code||r.name||r.team_name,gp:r.games_played||r.gp||'',pts:+r.points,ctx:String(r.conference_name||r.conference||lab||'')});return}
         Object.values(n).forEach(v=>w(v,lab));
       })(j,'');return out};
     for(const key of (OL.goodKey?[OL.goodKey]:OL.keys)){
