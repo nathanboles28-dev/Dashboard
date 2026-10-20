@@ -97,7 +97,7 @@ html,body{height:100%;background:var(--bg);color:var(--ink);font-family:Manrope,
   <div class="moonrow"><div id="moon"></div><div id="moontxt"></div></div></section>
  <section id="air" class="card"><h2>Next 12 hours</h2>
 <div class="hours" id="hours"></div></section>
- <section id="news" class="card"><h2 id="pgTitle">Up next · your teams</h2><div id="nextList"></div><div class="stg" id="stdNHL"></div><div class="stg" id="stdOHL"></div></section>
+ <section id="news" class="card"><h2 id="pgTitle">Up next · your teams</h2><div id="nextList"></div><div class="stg" id="stdNHL"><div class="none">Loading standings…</div></div><div class="stg" id="stdOHL"><div class="none">Loading standings…</div></div></section>
  <section id="live" class="card"><div class="lvtag" id="lvTag"></div><div><div class="lvrow" id="lvA"></div><div class="lvrow" id="lvH"></div></div><div id="lvClock"></div></section>
  <section id="sports" class="card"><h2>Scores</h2><div class="leagues" id="leagues"></div></section>
 </main>
@@ -371,21 +371,20 @@ async function standings(){
   if(OL)try{
     let rows=null,why='';
     const parse=t=>{t=t.trim();if(!/^[\[{]/.test(t)){const a=t.indexOf('('),b=t.lastIndexOf(')');if(a>=0&&b>a)t=t.slice(a+1,b)}return JSON.parse(t)};
-    const get=async url=>{let last='';const enc=encodeURIComponent(url);
-      try{return await jsonpObj(url,20000)}catch(e){last='jsonp: '+(e.message||'error')}
-      for(const u of [url,'https://api.allorigins.win/raw?url='+enc,'https://corsproxy.io/?url='+enc,'https://api.codetabs.com/v1/proxy?quest='+url]){
-        try{return parse(await (await tfetch(u)).text())}catch(e){last=e.message||'error'}}
-      throw new Error(last)};
-    const collect=j=>{const out=[];
-      (function w(n,lab){
-        if(Array.isArray(n))return n.forEach(x=>w(x,lab));
+    const race=fns=>new Promise((res,rej)=>{let n=fns.length;const errs=[];fns.forEach(f=>f().then(res,e=>{errs.push((e&&e.message)||'error');if(--n===0)rej(new Error(errs.join(' / ')))}))});
+    const get=url=>{const enc=encodeURIComponent(url),px=u=>async()=>parse(await (await tfetch(u,15000)).text());
+      return race([()=>jsonpObj(url,15000),px('https://api.allorigins.win/raw?url='+enc),px('https://corsproxy.io/?url='+enc),px('https://api.codetabs.com/v1/proxy?quest='+url)])};
+    const collect=j=>{const out=[];let gid=0;
+      (function w(n,lab,g){
+        if(Array.isArray(n))return n.forEach(x=>w(x,lab,g));
         if(!n||typeof n!=='object')return;
+        if(n.headers&&Array.isArray(n.data))g=++gid;
         if(n.headers&&n.headers.name&&typeof n.headers.name==='object')lab=n.headers.name.label||n.headers.name.title||lab;
         const l=[n.title,n.name,n.conference_name,n.conference,n.header,n.section_name].find(v=>typeof v==='string'&&/west|east/i.test(v));if(l)lab=l;
         const r=n.row||n;
-        if(r.points!==undefined&&typeof r.points!=='object'&&(r.team_code||r.name||r.team_name)){out.push({c:r.team_code||r.name||r.team_name,gp:r.games_played||r.gp||'',pts:+r.points,ctx:String(r.conference_name||r.conference||lab||'')});return}
-        Object.values(n).forEach(v=>w(v,lab));
-      })(j,'');return out};
+        if(r.points!==undefined&&typeof r.points!=='object'&&(r.team_code||r.name||r.team_name)){out.push({c:r.team_code||r.name||r.team_name,gp:r.games_played||r.gp||'',pts:+r.points,ctx:String(r.conference_name||r.conference||lab||''),g:g||0});return}
+        Object.values(n).forEach(v=>w(v,lab,g));
+      })(j,'',0);return out};
     for(const key of (OL.goodKey?[OL.goodKey]:OL.keys)){
       let sid=OL.seasonId||'';
       if(!sid)try{const sj=await get(`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=seasons&key=${key}&client_code=${OL.code}&fmt=json`);
@@ -397,7 +396,9 @@ async function standings(){
         try{
           const found=collect(await get(url));
           if(!found.length){why+=(why?' · ':'')+vn+': empty reply (season '+(sid||'?')+')';continue}
-          const west=found.filter(r=>/west/i.test(r.ctx));
+          let west=found.filter(r=>/west/i.test(r.ctx));
+          if(!west.length){const W=['GUE','SOO','LDN','KIT','SAG','FLNT','SAR','ER','WSR','OS'],gs={};found.forEach(r=>{(gs[r.g]=gs[r.g]||[]).push(r)});
+            const best=Object.values(gs).map(a=>[a.filter(r=>W.includes(r.c)).length,a]).sort((a,b)=>b[0]-a[0])[0];if(best&&best[0]>=3)west=best[1]}
           if(!west.length){why+=(why?' · ':'')+vn+': no Western label; saw: '+[...new Set(found.map(r=>r.ctx||'-'))].slice(0,4).join(', ');continue}
           rows=west;break;
         }catch(e){why+=(why?' · ':'')+vn+': '+(e.message||'error')}
@@ -433,7 +434,7 @@ setInterval(radar,300000);
 /* Keep pixels moving to avoid burn-in */
 setInterval(()=>{const x=(Math.random()*2-1)*.8,y=(Math.random()*2-1)*.8;$('shift').style.transform=`translate(${x}vw,${y}vh)`},300000);
 
-document.getElementById('ver').textContent='build 12:30 jsonp2';
+document.getElementById('ver').textContent='build 12:55 groups';
 moon();weather();sportsLoop();radar();
 setInterval(weather,900000);
 setInterval(moon,3600000);
