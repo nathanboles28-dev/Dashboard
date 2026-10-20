@@ -122,6 +122,15 @@ const CFG={
 /* ================================ */
 const $=id=>document.getElementById(id);
 document.documentElement.dataset.theme=CFG.theme||'dusk';
+let jpN=0;
+function jsonpObj(url,ms=10000){return new Promise((res,rej)=>{
+  const cb='__jp'+(++jpN)+'_'+Date.now(),sc=document.createElement('script');let done=false,t;
+  const end=()=>{done=true;clearTimeout(t);try{delete window[cb]}catch(e){window[cb]=undefined}sc.remove()};
+  t=setTimeout(()=>{if(!done){end();rej(new Error('timeout'))}},ms);
+  window[cb]=d=>{if(!done){end();res(d)}};
+  sc.onerror=()=>{if(!done){end();rej(new Error('jsonp blocked'))}};
+  sc.src=url+(url.includes('?')?'&':'?')+'callback='+cb;document.head.appendChild(sc)})}
+const jsonpText=async u=>JSON.stringify(await jsonpObj(u));
 const tfetch=(u,ms=8000)=>{let t;return Promise.race([fetch(u),new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error('timeout')),ms)})]).finally(()=>clearTimeout(t))};
 const WX={0:['☀️','Clear'],1:['🌤️','Mostly clear'],2:['⛅','Partly cloudy'],3:['☁️','Overcast'],45:['🌫️','Fog'],48:['🌫️','Fog'],51:['🌦️','Light drizzle'],53:['🌦️','Drizzle'],55:['🌧️','Heavy drizzle'],61:['🌧️','Light rain'],63:['🌧️','Rain'],65:['🌧️','Heavy rain'],71:['🌨️','Light snow'],73:['❄️','Snow'],75:['❄️','Heavy snow'],77:['🌨️','Snow grains'],80:['🌦️','Showers'],81:['🌧️','Showers'],82:['⛈️','Heavy showers'],85:['🌨️','Snow showers'],86:['❄️','Snow showers'],95:['⛈️','Thunderstorm'],96:['⛈️','Thunderstorm'],99:['⛈️','Thunderstorm']};
 let moonIcon='🌙';
@@ -239,10 +248,10 @@ async function hockeytechGames(L,ahead=1,all=false){
   for(const key of L.keys){
     const url=`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=scorebar&numberofdaysback=1&numberofdaysahead=${ahead}&key=${key}&client_code=${L.code}&fmt=json&lang=en`;
     const enc=encodeURIComponent(url);
-    const routes=[['direct',url],['proxy A','https://api.allorigins.win/raw?url='+enc],['proxy B','https://corsproxy.io/?url='+enc],['proxy C','https://api.codetabs.com/v1/proxy?quest='+url]];
+    const routes=[['jsonp',url],['proxy A','https://api.allorigins.win/raw?url='+enc],['proxy B','https://corsproxy.io/?url='+enc],['proxy C','https://api.codetabs.com/v1/proxy?quest='+url]];
     for(const [name,u] of routes){
       try{
-        let txt=(await (await tfetch(u)).text()).trim();
+        let txt=name==='jsonp'?await jsonpText(u):(await (await tfetch(u)).text()).trim();
         if(!/^[\[{]/.test(txt)){const a=txt.indexOf('('),b=txt.lastIndexOf(')');if(a>=0&&b>a)txt=txt.slice(a+1,b)}
         let j;try{j=JSON.parse(txt)}catch(e){why[name]='not JSON';continue}
         if(!j||!j.SiteKit){why[name]='bad reply';continue}
@@ -345,7 +354,7 @@ async function sportsLoop(){
 let stAt=0;
 const stRow=(i,c,gp,pts,me)=>`<div class="st${me?' me':''}"><i>${i}</i><b>${c}</b><span>${gp} GP</span><em>${pts}</em></div>`;
 const stHTML=(rows,fav)=>rows.slice(0,8).map((r,i)=>stRow(i+1,r.c,r.gp,r.pts,fav.includes(r.c))).join('');
-const stFail=(id,e)=>{$(id).innerHTML='<div class="none">Standings unavailable<div class="why">'+(e.message||e)+'</div></div>';$(id).style.gridTemplateColumns='1fr'};
+const stFail=(id,e)=>{stAt=Date.now()-1500000;$(id).innerHTML='<div class="none">Standings unavailable<div class="why">'+(e.message||e)+'</div></div>';$(id).style.gridTemplateColumns='1fr'};
 async function standings(){
   if(Date.now()-stAt<1800000)return;stAt=Date.now();
   const fav=L=>(L&&L.fav)||[];
@@ -362,6 +371,7 @@ async function standings(){
     let rows=null,why='';
     const parse=t=>{t=t.trim();if(!/^[\[{]/.test(t)){const a=t.indexOf('('),b=t.lastIndexOf(')');if(a>=0&&b>a)t=t.slice(a+1,b)}return JSON.parse(t)};
     const get=async url=>{let last='';const enc=encodeURIComponent(url);
+      try{return await jsonpObj(url)}catch(e){last='jsonp: '+(e.message||'error')}
       for(const u of [url,'https://api.allorigins.win/raw?url='+enc,'https://corsproxy.io/?url='+enc,'https://api.codetabs.com/v1/proxy?quest='+url]){
         try{return parse(await (await tfetch(u)).text())}catch(e){last=e.message||'error'}}
       throw new Error(last)};
