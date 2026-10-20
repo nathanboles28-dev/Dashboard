@@ -65,8 +65,8 @@ html,body{height:100%;background:var(--bg);color:var(--ink);font-family:Manrope,
 .pin{position:absolute;left:50%;top:50%;width:1.3vh;height:1.3vh;margin:-.65vh;border-radius:50%;background:#fff;box-shadow:0 0 0 .5vh rgba(255,255,255,.3)}
 .mcap{position:absolute;left:.7vw;bottom:.6vh;font-size:1.2vh;color:rgba(255,255,255,.7);text-shadow:0 0 4px #000}
 .mtime{position:absolute;right:.7vw;top:.6vh;font-size:1.5vh;color:#fff;text-shadow:0 0 4px #000}
-.stg{display:grid;grid-template-columns:1fr 1fr;column-gap:2vw}
-.st{display:flex;align-items:baseline;gap:.6vw;font-size:1.9vh;padding:.45vh 0;color:var(--dim)}
+.stg{display:grid;grid-template-columns:1fr;column-gap:2vw}
+.st{display:flex;align-items:baseline;gap:.6vw;font-size:1.75vh;line-height:1.2;padding:.15vh 0;color:var(--dim)}
 .st i{font-style:normal;width:1.2vw}.st b{font-weight:400;color:var(--ink);flex:1}.st em{font-style:normal;color:var(--ink);width:2.2vw;text-align:right}
 .st.me b,.st.me em{font-weight:600;color:#ffd1ec}
 .pgn{font-weight:400;color:var(--dim);font-size:1.5vh;margin-left:.6vw}
@@ -439,7 +439,7 @@ setInterval(radar,300000);
 /* Keep pixels moving to avoid burn-in */
 setInterval(()=>{const x=(Math.random()*2-1)*.8,y=(Math.random()*2-1)*.8;$('shift').style.transform=`translate(${x}vw,${y}vh)`},300000);
 
-document.getElementById('ver').textContent='build OHL standings fix';
+document.getElementById('ver').textContent='build standings 1 column';
 moon();weather();sportsLoop();radar();
 setInterval(weather,900000);
 setInterval(moon,3600000);
