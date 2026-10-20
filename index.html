@@ -130,7 +130,7 @@ function jsonpObj(url,ms=10000){return new Promise((res,rej)=>{
   t=setTimeout(()=>{if(!done){end();rej(new Error('timeout'))}},ms);
   window[cb]=d=>{if(!done){end();res(d)}};
   sc.onerror=()=>{if(!done){end();rej(new Error('jsonp blocked'))}};
-  sc.src=url+(url.includes('?')?'&':'?')+'callback='+cb;document.head.appendChild(sc)})}
+  sc.referrerPolicy='no-referrer';sc.src=url+(url.includes('?')?'&':'?')+'callback='+cb;document.head.appendChild(sc)})}
 const jsonpText=async u=>JSON.stringify(await jsonpObj(u));
 const tfetch=(u,ms=8000)=>{let t;return Promise.race([fetch(u),new Promise((_,rej)=>{t=setTimeout(()=>rej(new Error('timeout')),ms)})]).finally(()=>clearTimeout(t))};
 const WX={0:['☀️','Clear'],1:['🌤️','Mostly clear'],2:['⛅','Partly cloudy'],3:['☁️','Overcast'],45:['🌫️','Fog'],48:['🌫️','Fog'],51:['🌦️','Light drizzle'],53:['🌦️','Drizzle'],55:['🌧️','Heavy drizzle'],61:['🌧️','Light rain'],63:['🌧️','Rain'],65:['🌧️','Heavy rain'],71:['🌨️','Light snow'],73:['❄️','Snow'],75:['❄️','Heavy snow'],77:['🌨️','Snow grains'],80:['🌦️','Showers'],81:['🌧️','Showers'],82:['⛈️','Heavy showers'],85:['🌨️','Snow showers'],86:['❄️','Snow showers'],95:['⛈️','Thunderstorm'],96:['⛈️','Thunderstorm'],99:['⛈️','Thunderstorm']};
@@ -372,7 +372,7 @@ async function standings(){
     let rows=null,why='';
     const parse=t=>{t=t.trim();if(!/^[\[{]/.test(t)){const a=t.indexOf('('),b=t.lastIndexOf(')');if(a>=0&&b>a)t=t.slice(a+1,b)}return JSON.parse(t)};
     const get=async url=>{let last='';const enc=encodeURIComponent(url);
-      try{return await jsonpObj(url)}catch(e){last='jsonp: '+(e.message||'error')}
+      try{return await jsonpObj(url,20000)}catch(e){last='jsonp: '+(e.message||'error')}
       for(const u of [url,'https://api.allorigins.win/raw?url='+enc,'https://corsproxy.io/?url='+enc,'https://api.codetabs.com/v1/proxy?quest='+url]){
         try{return parse(await (await tfetch(u)).text())}catch(e){last=e.message||'error'}}
       throw new Error(last)};
@@ -393,13 +393,14 @@ async function standings(){
         if(ss.length)sid=String(Math.max(...ss.map(z=>+z.season_id)))}catch(e){}
       const base=`https://lscluster.hockeytech.com/feed/index.php?feed=statviewfeed&view=teams&groupTeamsBy=conference&context=overall&season=${sid}&special=false&key=${key}&client_code=${OL.code}&league_id=1&lang=en&division=-1&sort=points`;
       for(const url of [base+'&site_id=2',base+'&site_id=0',`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=statviewtype&stat=conference&type=standings&season_id=${sid}&key=${key}&client_code=${OL.code}&fmt=json&lang=en`]){
+        const vn=(url.includes('site_id=2')?'A':url.includes('site_id=0')?'B':'C');
         try{
           const found=collect(await get(url));
-          if(!found.length){why='empty reply (season '+(sid||'?')+')';continue}
+          if(!found.length){why+=(why?' · ':'')+vn+': empty reply (season '+(sid||'?')+')';continue}
           const west=found.filter(r=>/west/i.test(r.ctx));
-          if(!west.length){why='no Western label; saw: '+[...new Set(found.map(r=>r.ctx||'-'))].slice(0,4).join(', ');continue}
+          if(!west.length){why+=(why?' · ':'')+vn+': no Western label; saw: '+[...new Set(found.map(r=>r.ctx||'-'))].slice(0,4).join(', ');continue}
           rows=west;break;
-        }catch(e){why=e.message||'error'}
+        }catch(e){why+=(why?' · ':'')+vn+': '+(e.message||'error')}
       }
       if(rows)break;
     }
@@ -432,7 +433,7 @@ setInterval(radar,300000);
 /* Keep pixels moving to avoid burn-in */
 setInterval(()=>{const x=(Math.random()*2-1)*.8,y=(Math.random()*2-1)*.8;$('shift').style.transform=`translate(${x}vw,${y}vh)`},300000);
 
-document.getElementById('ver').textContent='build 12:15 jsonp';
+document.getElementById('ver').textContent='build 12:30 jsonp2';
 moon();weather();sportsLoop();radar();
 setInterval(weather,900000);
 setInterval(moon,3600000);
