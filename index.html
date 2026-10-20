@@ -170,15 +170,16 @@ async function nextUp(){
   const pad=n=>String(n).padStart(2,'0'),ymd=d=>d.getFullYear()+pad(d.getMonth()+1)+pad(d.getDate());
   const q='?dates='+ymd(new Date())+'-'+ymd(new Date(Date.now()+7*864e5))+'&limit=300';
   const rows=[];
+  const draw=()=>{rows.sort((a,b)=>a.date-b.date);nextRows=rows;$('nextList').innerHTML=rows.map(r=>`<div class="nx"><span class="tm">${logoImg(r.logo)}<span>${r.L.label} · ${r.at} ${r.opp}</span></span><span>${nextTime(r.date)}</span></div>`).join('')||'<div class="none">Checking schedules…</div>'};
+  draw();
   await Promise.all(CFG.leagues.filter(L=>L.fav&&L.fav.length).map(async L=>{
     try{
       const gs=await (L.type==='hockeytech'?hockeytechGames(L,7,true):espnGames(L,q));
       const g=gs.filter(g=>isFav(L,g)&&g.state==='pre'&&g.date>new Date()).sort((a,b)=>a.date-b.date)[0];
-      if(g){const home=L.fav.includes(g.H);rows.push({L,date:g.date,at:home?'vs':'at',opp:home?g.nA:g.nH,logo:home?g.lA:g.lH})}
-    }catch(e){console.warn('next',L.label,e)}
+      if(g){const home=L.fav.includes(g.H);rows.push({L,date:g.date,at:home?'vs':'at',opp:home?g.nA:g.nH,logo:home?g.lA:g.lH});draw()}
+    }catch(e){console.warn('next',L.label,e);if(!rows.length)$('nextList').innerHTML='<div class="none">Schedule unavailable ('+L.label+': '+(e.message||'error').slice(0,60)+')</div>'}
   }));
-  rows.sort((a,b)=>a.date-b.date);nextRows=rows;
-  $('nextList').innerHTML=rows.map(r=>`<div class="nx"><span class="tm">${logoImg(r.logo)}<span>${r.L.label} · ${r.at} ${r.opp}</span></span><span>${nextTime(r.date)}</span></div>`).join('')||'<div class="none">No games coming up</div>';
+  if(!rows.length)$('nextList').innerHTML='<div class="none">No games coming up in the next week</div>';
 }
 
 /* ---------- Scores: one box per league + live scorebug for your teams ---------- */
@@ -323,26 +324,30 @@ async function standings(){
   const OL=CFG.leagues.find(l=>l.type==='hockeytech');
   if(OL)try{
     let rows=null,why='';
-    for(const key of OL.keys){
-      const url=`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=statviewtype&stat=conference&type=standings&key=${key}&client_code=${OL.code}&fmt=json&lang=en`;
-      for(const u of [url,'https://api.allorigins.win/raw?url='+encodeURIComponent(url)]){
-        try{
-          const j=JSON.parse((await (await tfetch(u)).text()).trim().replace(/^\(/,'').replace(/\)$/,''));
-          const found=[];
-          (function walk(n,ctx){
-            if(Array.isArray(n))return n.forEach(x=>walk(x,ctx));
-            if(!n||typeof n!=='object')return;
-            const nm=[n.name,n.title,n.conference,n.conference_name,n.header].find(v=>typeof v==='string'&&/conference/i.test(v));if(nm)ctx=nm;
-            if(n.points!==undefined&&(n.team_code||n.team_name||n.name))found.push({c:n.team_code||n.name,gp:n.games_played||n.gp||'',pts:+n.points,ctx:n.conference_name||n.conference||ctx||''});
-            else Object.values(n).forEach(v=>walk(v,ctx));
-          })(j,'');
-          if(!found.length){why='unrecognised reply';continue}
-          const west=found.filter(r=>/west/i.test(r.ctx));
-          if(!west.length){why='no Western rows';continue}
-          rows=west;break;
-        }catch(e){why='blocked'}
-      }
-      if(rows)break;
+    const get=async url=>{let last='';const enc=encodeURIComponent(url);
+      for(const u of [url,'https://api.allorigins.win/raw?url='+enc,'https://corsproxy.io/?url='+enc,'https://api.codetabs.com/v1/proxy?quest='+url]){
+        try{return JSON.parse((await (await tfetch(u)).text()).trim().replace(/^\(/,'').replace(/\)$/,''))}catch(e){last=e.message||'error'}}
+      throw new Error(last)};
+    for(const key of (OL.goodKey?[OL.goodKey]:OL.keys)){
+      try{
+        let sid='';
+        try{const sj=await get(`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=seasons&key=${key}&client_code=${OL.code}&fmt=json`);
+          const ss=((sj.SiteKit||{}).Seasons||[]).filter(z=>String(z.playoff)!=='1'&&!/pre/i.test(z.season_name||''));
+          if(ss.length)sid=String(Math.max(...ss.map(z=>+z.season_id)))}catch(e){}
+        const j=await get(`https://lscluster.hockeytech.com/feed/index.php?feed=modulekit&view=statviewtype&stat=conference&type=standings&season_id=${sid}&key=${key}&client_code=${OL.code}&fmt=json&lang=en`);
+        const found=[];
+        (function walk(n,ctx){
+          if(Array.isArray(n))return n.forEach(x=>walk(x,ctx));
+          if(!n||typeof n!=='object')return;
+          const nm=[n.name,n.title,n.conference,n.conference_name,n.header].find(v=>typeof v==='string'&&/conference/i.test(v));if(nm)ctx=nm;
+          if(n.points!==undefined&&(n.team_code||n.team_name||n.name))found.push({c:n.team_code||n.name,gp:n.games_played||n.gp||'',pts:+n.points,ctx:n.conference_name||n.conference||ctx||''});
+          else Object.values(n).forEach(v=>walk(v,ctx));
+        })(j,'');
+        if(!found.length){why='no standings in reply (season '+(sid||'?')+')';continue}
+        const west=found.filter(r=>/west/i.test(r.ctx));
+        if(!west.length){why='no Western rows';continue}
+        rows=west;break;
+      }catch(e){why=e.message||'error'}
     }
     if(!rows)throw new Error(why||'failed');
     const seen=new Set();rows=rows.filter(r=>!seen.has(r.c)&&seen.add(r.c)).sort((a,b)=>b.pts-a.pts);
@@ -358,26 +363,22 @@ const RZ=7;let rFrames=[],rIdx=0;
 async function radar(){
   try{
     const r=CFG.lat*Math.PI/180,n=2**RZ,x=(CFG.lon+180)/360*n,y=(1-Math.log(Math.tan(r)+1/Math.cos(r))/Math.PI)/2*n,cx=Math.floor(x),cy=Math.floor(y);
-    const d=await (await tfetch('https://api.rainviewer.com/public/weather-maps.json')).json();
-    const past=d.radar.past.slice(-6);let h='<div class="rt">';
     const pos=(tx,ty)=>`left:${((tx-x)*256).toFixed(1)}px;top:${((ty-y)*256).toFixed(1)}px`;
-    for(let tx=cx-1;tx<=cx+1;tx++)for(let ty=cy-1;ty<=cy+1;ty++)h+=`<img src="https://a.basemaps.cartocdn.com/dark_all/${RZ}/${tx}/${ty}.png" style="${pos(tx,ty)}" alt="">`;
-    past.forEach((f,i)=>{for(let tx=cx-1;tx<=cx+1;tx++)for(let ty=cy-1;ty<=cy+1;ty++)h+=`<img class="rf" data-f="${i}" src="${d.host}${f.path}/256/${RZ}/${tx}/${ty}/2/1_1.png" style="${pos(tx,ty)}" alt="">`});
-    h+='</div><div class="pin"></div><div class="mtime" id="mtime"></div><div class="mcap">Radar: Rain Viewer · Map © OpenStreetMap, CARTO</div>';
-    $('radar').innerHTML=h;rFrames=past;rIdx=0;
+    let h='<div class="rt">';
+    for(let tx=cx-1;tx<=cx+1;tx++)for(let ty=cy-1;ty<=cy+1;ty++)h+=`<img src="https://services.arcgisonline.com/ArcGIS/rest/services/Canvas/World_Dark_Gray_Base/MapServer/tile/${RZ}/${ty}/${tx}" style="${pos(tx,ty)}" alt="" onerror="this.remove()">`;
+    const W=40075016.68/n,O=20037508.34,bb=[O-0,0].length&&[-O+(cx-1)*W,O-(cy+2)*W,-O+(cx+2)*W,O-(cy-1)*W];
+    const wms=`https://geo.weather.gc.ca/geomet?service=WMS&version=1.3.0&request=GetMap&layers=RADAR_1KM_RRAI,RADAR_1KM_RSNO&styles=&crs=EPSG:3857&bbox=${bb.join(',')}&width=768&height=768&format=image/png&transparent=true&_=${Date.now()}`;
+    h+=`<img src="${wms}" style="${pos(cx-1,cy-1)};width:768px;height:768px;opacity:.8" alt="" onerror="this.remove()">`;
+    h+='</div><div class="pin"></div><div class="mtime">Radar · '+fmt(new Date())+'</div><div class="mcap">Environment Canada radar · Map © Esri</div>';
+    $('radar').innerHTML=h;rFrames=[];
   }catch(e){console.warn('radar',e)}
 }
-setInterval(()=>{
-  if(!rFrames.length)return;
-  rIdx=(rIdx+1)%(rFrames.length+2);const k=Math.min(rIdx,rFrames.length-1);   /* pauses on the newest frame */
-  document.querySelectorAll('#radar .rf').forEach(im=>im.style.opacity=(+im.dataset.f===k)?'.85':'0');
-  const t=$('mtime');if(t)t.textContent=fmt(new Date(rFrames[k].time*1000));
-},700);
+setInterval(radar,300000);
 
 /* Keep pixels moving to avoid burn-in */
 setInterval(()=>{const x=(Math.random()*2-1)*.8,y=(Math.random()*2-1)*.8;$('shift').style.transform=`translate(${x}vw,${y}vh)`},300000);
 
-moon();weather();sportsLoop();radar();setInterval(radar,600000);
+moon();weather();sportsLoop();radar();
 setInterval(weather,900000);
 setInterval(moon,3600000);
 </script>
