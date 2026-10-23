@@ -52,10 +52,16 @@ body.alt #mini{opacity:.85}
 .gr .mid{font-size:4.6vh;font-weight:300;color:var(--dim);font-variant-numeric:tabular-nums;text-align:center;white-space:nowrap}
 .gr .mid.sc{color:var(--ink);font-weight:600}
 .gr .logo{width:8.5vh;height:8.5vh;background:none;padding:0;border-radius:0;filter:drop-shadow(0 .4vh 1vh rgba(0,0,0,.35))}
+.gr.goal{animation:goalCard 1.1s ease-in-out infinite;border-color:rgba(255,70,90,.9)}
+@keyframes goalCard{50%{background:rgba(255,40,70,.42);box-shadow:0 0 5vh rgba(255,40,70,.7)}}
+.gr.goal .when small{color:#fff}
+#goalFx{position:fixed;inset:0;z-index:4;pointer-events:none;opacity:0}
+#goalFx.on{animation:goalEdge 1.1s ease-in-out infinite}
+@keyframes goalEdge{0%,100%{opacity:0}50%{opacity:1;box-shadow:inset 0 0 18vh 4vh rgba(255,30,60,.75)}}
 .gr .arena{grid-column:1/4;grid-row:2;text-align:center;font-size:2vh;color:var(--dim);margin:-1.6vh 0 2.4vh;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:0 3vh}
 .gr .when{grid-column:4;grid-row:1/3;align-self:stretch;display:flex;flex-direction:column;justify-content:center;gap:.6vh;padding:0 3vh;
- background:rgba(255,255,255,.06);border-left:1px solid var(--edge);text-align:right}
-.gr .when small{font-size:1.7vh;font-weight:600;letter-spacing:.08em;color:var(--dim);display:flex;align-items:center;justify-content:flex-end;gap:.7vh}
+ background:rgba(255,255,255,.06);border-left:1px solid var(--edge);text-align:center;align-items:center}
+.gr .when small{font-size:1.7vh;font-weight:600;letter-spacing:.08em;color:var(--dim);display:flex;align-items:center;justify-content:center;gap:.7vh}
 .gr .when b{font-size:4vh;font-weight:400;font-variant-numeric:tabular-nums;white-space:nowrap}
 .gr .when.live small{color:#ff8da2}.gr .when.live b{font-size:3.6vh}.gr .when.fin b{color:var(--dim);font-size:3.4vh}
 .gnone{font-size:3.4vh;font-weight:300;color:var(--dim);margin-bottom:3vh}
@@ -159,7 +165,7 @@ body.alt #mini{opacity:.85}
  <div class="card"><h2>Next 24 hours</h2><div id="fHours"></div></div>
  <div class="card"><h2>7-day forecast</h2><div id="fDays"></div></div>
 </section>
-<div id="mini"></div><div id="dots"></div>
+<div id="goalFx"></div><div id="mini"></div><div id="dots"></div>
 <div id="ver" style="position:fixed;right:1vw;bottom:.5vh;z-index:3;font-size:1.2vh;color:#fff;opacity:.4"></div>
 <script>
 /* ===== SETTINGS: edit these ===== */
@@ -192,7 +198,9 @@ const CFG={
   // Until both are filled in, the photos page is skipped.
   photos:{folderId:'1lfdG3dM382HfEQ0HyMe2XbDmynkaV8kn', apiKey:'AIzaSyBLYr4gON_beELL-4ZAXzXF-Dv3X9FHKiI'},
   // Nicer names on the Tonight page (full team name → what to show)
-  nicknames:{'Maple Leafs':'Leafs','Blue Jays':'Jays'}
+  nicknames:{'Maple Leafs':'Leafs','Blue Jays':'Jays'},
+  // Goal alert: when one of your teams' games has a score change, jump to the Tonight page and pulse red for this many seconds
+  goalAlert:{on:true, secs:25}
 };
 /* ================================ */
 const $=id=>document.getElementById(id);
@@ -381,7 +389,9 @@ async function sports(){
     if(g.state==='in'||(f&&g.state==='pre'&&mins<=30&&mins>-10))fav.push({L:r.L,g,at:r.at,f});
     if(!f)return;
     const key=r.L.label+g.id,sc=g.sA+'-'+g.sH;
-    if(g.state==='in'&&prevScore[key]!==undefined&&prevScore[key]!==sc)flashUntil=Date.now()+5000;
+    if(g.state==='in'&&prevScore[key]!==undefined&&prevScore[key]!==sc){flashUntil=Date.now()+5000;
+      const [oA,oH]=prevScore[key].split('-').map(Number),side=(+g.sA>oA)?'A':(+g.sH>oH)?'H':'';
+      if(side)goalAlert(key,side==='A'?(g.fA||g.nA):(g.fH||g.nH))}
     prevScore[key]=sc;
   }));
   fav.sort((a,b)=>b.f-a.f);favGames=fav;renderLive();
@@ -569,7 +579,7 @@ function renderGames(){
     return;
   }
   $('gTitle').textContent=(new Date().getHours()<16?'Today':'Tonight');
-  $('gList').innerHTML=rows.map(({L,g,at})=>{
+  const html=rows.map(({L,g,at})=>{
     const f=L.fav||[],pre=g.state==='pre',live=g.state==='in';
     let when,cls='when';
     if(pre)when=fmt(g.date);
@@ -577,12 +587,14 @@ function renderGames(){
       when=g.live.clock!==null?mmss(Math.max(0,g.live.clock-Math.floor((Date.now()-at)/1000)))+(g.live.per?' · '+g.live.per:''):g.live.text}
     else{cls+=' fin';when=g.det}
     const mid=pre?'<div class="mid">–</div>':`<div class="mid sc">${g.sA} – ${g.sH}</div>`;
-    const tag=live?'<i class="dot"></i>LIVE · '+L.label:pre?L.label+' · '+(g.live.hockey?'PUCK DROP':L.sport==='baseball'?'FIRST PITCH':'START'):L.label;
-    return `<div class="gr">
+    const tag=(goals[r_key(L,g)]&&goals[r_key(L,g)].until>Date.now())?'🚨 '+(L.sport==='baseball'?'RUN':'GOAL')+' · '+nick(goals[r_key(L,g)].team).toUpperCase():live?'<i class="dot"></i>LIVE · '+L.label:pre?L.label+' · '+(g.live.hockey?'PUCK DROP':L.sport==='baseball'?'FIRST PITCH':'START'):L.label;
+    const gk=goals[r_key(L,g)],isGoal=gk&&gk.until>Date.now();
+    return `<div class="gr${isGoal?' goal':''}">
       <div class="side a">${bigLogo(g.lA)}<div class="nm${f.includes(g.A)?' me':''}">${nick(g.fA||g.nA)}</div></div>${mid}
       <div class="side h"><div class="nm${f.includes(g.H)?' me':''}">${nick(g.fH||g.nH)}</div>${bigLogo(g.lH)}</div>
       <div class="${cls}"><small>${tag}</small><b>${when}</b></div>${g.arena?`<div class="arena">${g.arena}</div>`:''}</div>`;
   }).join('');
+  if($('gList').innerHTML!==html)$('gList').innerHTML=html;
 }
 setInterval(()=>{if($('pGames').classList.contains('on'))renderGames()},5000);
 
@@ -590,17 +602,26 @@ setInterval(()=>{if($('pGames').classList.contains('on'))renderGames()},5000);
 const PAGE_EL={dashboard:'shift',photos:'pPhotos',games:'pGames',forecast:'pFc'};
 let pIdx=-1,pTimer;
 const canShow=p=>!!PAGE_EL[p.type]&&(p.type!=='photos'||photosOn());
-function nextPage(){
+const goals={};const r_key=(L,g)=>L.label+g.id;
+function goalAlert(key,team){
+  const G=CFG.goalAlert||{};if(G.on===false)return;
+  const secs=G.secs||25;goals[key]={team,until:Date.now()+secs*1000};
+  const fx=$('goalFx');fx.classList.remove('on');void fx.offsetWidth;fx.classList.add('on');
+  clearTimeout(fx._t);fx._t=setTimeout(()=>fx.classList.remove('on'),secs*1000);
+  nextPage('games',secs);
+}
+function nextPage(force,hold){
   const list=(CFG.pages&&CFG.pages.length)?CFG.pages:[{type:'dashboard',secs:60}];
-  for(let n=0;n<list.length;n++){pIdx=(pIdx+1)%list.length;if(canShow(list[pIdx]))break}
-  const p=list[pIdx];
+  let p;
+  if(force){const i=list.findIndex(q=>q.type===force);if(i>=0)pIdx=i;p=i>=0?list[i]:{type:force}}
+  else{for(let n=0;n<list.length;n++){pIdx=(pIdx+1)%list.length;if(canShow(list[pIdx]))break}p=list[pIdx]}
   if(p.type==='photos'){showPhoto();loadPhotos()}
   if(p.type==='games')renderGames();
   Object.entries(PAGE_EL).forEach(([t,id])=>$(id).classList.toggle('on',t===p.type));
   document.body.classList.toggle('alt',p.type!=='dashboard');
   document.querySelector('.aurora').style.filter=p.hue?`hue-rotate(${p.hue}deg)`:'';
   $('dots').innerHTML=list.filter(canShow).length>1?list.map((q,i)=>canShow(q)?`<i class="${i===pIdx?'on':''}"></i>`:'').join(''):'';
-  clearTimeout(pTimer);pTimer=setTimeout(nextPage,(p.secs||15)*1000);
+  clearTimeout(pTimer);pTimer=setTimeout(()=>nextPage(),(hold||p.secs||15)*1000);
 }
 
 /* Keep pixels moving to avoid burn-in */
